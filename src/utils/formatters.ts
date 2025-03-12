@@ -8,29 +8,85 @@ export function formatMessageSummary(summary: MessageSummary, userDetails: UserM
     text += `Total Members: ${summary.totalMembers}\n`;
     text += `Reactions: ${summary.reactions.map(r => `${r.emoji}: ${r.count}`).join(', ') || 'None'}\n\n`;
 
-    // Format read users table
-    if (userDetails.readUsers.length > 0) {
-        text += '**Users who have read:**\n```\n';
-        text += 'Username'.padEnd(20) + 'Reactions\n';
-        text += '─'.repeat(40) + '\n';
-        
-        userDetails.readUsers.forEach(user => {
-            text += user.name.padEnd(20) + (user.reactions || 'None') + '\n';
-        });
-        text += '```\n';
+// Format read users table
+if (userDetails.readUsers.length > 0) {
+    text += '**Users who have read:**\n```\n';
+    text += 'Username'.padEnd(20) + 'Reactions\n';
+    text += '─'.repeat(40) + '\n';
+    
+    // Calculate the maximum characters we can use for the list
+    const maxMessageLength = 1900;
+    const currentLength = text.length;
+    const codeBlockEnd = '```\n'.length;
+    const andMoreText = '\nand xxx more'.length;
+    const maxListLength = maxMessageLength - currentLength - codeBlockEnd - andMoreText;
+    
+    let listText = '';
+    let displayedUsers = 0;
+    
+    // Add users until we reach the limit
+    for (const user of userDetails.readUsers) {
+        const userLine = user.name.padEnd(20) + (user.reactions || 'None') + '\n';
+        if (listText.length + userLine.length <= maxListLength) {
+            listText += userLine;
+            displayedUsers++;
+        } else {
+            break;
+        }
     }
+    
+    // Add the list to the text
+    text += listText;
+    
+    // If we couldn't fit all users, add "and xxx more" at the end
+    if (displayedUsers < userDetails.readUsers.length) {
+        const remaining = userDetails.readUsers.length - displayedUsers;
+        text += `and ${remaining} more`;
+    }
+    
+    text += '```\n';
+}
 
-    // Format unread users table
-    if (userDetails.unreadUsers.length > 0) {
-        text += '**Users who have not read:**\n```\n';
-        text += 'Username\n';
-        text += '─'.repeat(20) + '\n';
-        
-        userDetails.unreadUsers.forEach(user => {
-            text += user.name + '\n';
-        });
-        text += '```';
+// Format unread users table
+if (userDetails.unreadUsers.length > 0) {
+    text += '**Users who have not read:**\n```\n';
+    text += 'Username\n';
+    text += '─'.repeat(20) + '\n';
+    
+    // Calculate the maximum characters we can use for the list
+    // Discord's message limit is 2000, but we'll use 1900 to be safe
+    // We also need to account for the closing code block and potential "and xxx more" text
+    const maxMessageLength = 1900;
+    const currentLength = text.length;
+    const codeBlockEnd = '```'.length;
+    const andMoreText = '\nand xxx more'.length;
+    const maxListLength = maxMessageLength - currentLength - codeBlockEnd - andMoreText;
+    
+    let listText = '';
+    let displayedUsers = 0;
+    
+    // Add users until we reach the limit
+    for (const user of userDetails.unreadUsers) {
+        const userLine = user.name + '\n';
+        if (listText.length + userLine.length <= maxListLength) {
+            listText += userLine;
+            displayedUsers++;
+        } else {
+            break;
+        }
     }
+    
+    // Add the list to the text
+    text += listText;
+    
+    // If we couldn't fit all users, add "and xxx more" at the end
+    if (displayedUsers < userDetails.unreadUsers.length) {
+        const remaining = userDetails.unreadUsers.length - displayedUsers;
+        text += `and ${remaining} more`;
+    }
+    
+    text += '```';
+}
 
     return text;
 }
@@ -58,14 +114,45 @@ export function formatActivityRanking(
     
     text += '─'.repeat(53) + '\n';
 
-    // User rows
-    users.forEach(user => {
-        text += user.username.padEnd(20) +
-               user.readCount.toString().padEnd(10) +
-               user.totalReactions.toString().padEnd(11) +
-               user.firstReadCount.toString().padEnd(7) +
-               user.activityScore.toString() + '\n';
-    });
+    // Calculate the maximum characters we can use for the list
+    const maxMessageLength = 1900;
+    const headerLength = text.length;
+    const legendText = '\n' + '─'.repeat(53) + '\n' +
+                       'Messages: Number of messages read\n' +
+                       'Reactions: Total reactions given\n' +
+                       'Early: Times among first 25% to read\n' +
+                       'Score: Weighted activity score\n';
+    const legendLength = legendText.length + '```'.length;
+    const andMoreText = '\nand xxx more'.length;
+    const maxListLength = maxMessageLength - headerLength - legendLength - andMoreText;
+    
+    let listText = '';
+    let displayedUsers = 0;
+    
+    // Add users until we reach the limit
+    for (const user of users) {
+        const userLine = user.username.padEnd(20) +
+                         user.readCount.toString().padEnd(10) +
+                         user.totalReactions.toString().padEnd(11) +
+                         user.firstReadCount.toString().padEnd(7) +
+                         user.activityScore.toString() + '\n';
+                         
+        if (listText.length + userLine.length <= maxListLength) {
+            listText += userLine;
+            displayedUsers++;
+        } else {
+            break;
+        }
+    }
+    
+    // Add the list to the text
+    text += listText;
+    
+    // If we couldn't fit all users, add "and xxx more" at the end
+    if (displayedUsers < users.length) {
+        const remaining = users.length - displayedUsers;
+        text += `and ${remaining} more`;
+    }
 
     // Legend
     text += '\n' + '─'.repeat(53) + '\n';
