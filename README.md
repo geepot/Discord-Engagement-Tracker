@@ -270,3 +270,82 @@ The bot can be configured through the `config.ts` file:
   - Admin commands require Administrator permission OR an admin role specified in `ADMIN_ROLE_IDS`
   - Mod commands require Manage Messages permission OR a mod role specified in `MOD_ROLE_IDS`
 - The bot handles graceful shutdown to ensure data is saved
+
+## Troubleshooting
+
+### Installation Issues
+
+#### better-sqlite3 Installation Errors
+
+If you encounter errors when installing dependencies related to `better-sqlite3` and Python's `distutils` module:
+
+```
+ModuleNotFoundError: No module named 'distutils'
+```
+
+This is because `better-sqlite3` requires native compilation and Python's `distutils` module, which was removed in Python 3.12. Here are several solutions:
+
+1. **Install Python setuptools package**:
+   ```bash
+   # For Debian/Ubuntu-based systems
+   sudo apt-get update
+   sudo apt-get install python3-setuptools
+
+   # For CentOS/RHEL-based systems
+   sudo yum install python3-setuptools
+   ```
+
+2. **Use an older Python version**:
+   ```bash
+   # Set Python path to an older version if available
+   export PYTHON=/usr/bin/python3.10  # Adjust path to your available Python version
+   npm install
+   ```
+
+3. **Use a Docker container for development**:
+   ```bash
+   # Create a Dockerfile
+   cat > Dockerfile << 'EOF'
+   FROM node:18
+   WORKDIR /app
+   COPY package*.json ./
+   RUN apt-get update && apt-get install -y python3-setuptools
+   RUN npm install
+   COPY . .
+   CMD ["npm", "start"]
+   EOF
+
+   # Build and run
+   docker build -t discord-tracker .
+   docker run -it discord-tracker
+   ```
+
+4. **Switch to sqlite3 package**:
+   ```bash
+   # Edit package.json to replace better-sqlite3 with sqlite3
+   sed -i 's/"better-sqlite3".*/"sqlite3": "^5.1.6",/' package.json
+
+   # Remove node_modules and package-lock.json
+   rm -rf node_modules package-lock.json
+
+   # Install dependencies again
+   npm install
+   ```
+   Note: This will require some code changes in the database service.
+
+### Runtime Issues
+
+#### Bot Not Responding to Commands
+
+1. **Check your bot token**: Ensure your Discord bot token in the `.env` file is correct.
+2. **Verify permissions**: Make sure the bot has the necessary permissions in your Discord server.
+3. **Check the tracked channel**: Use the `!setup` command to configure the tracked channel if not set.
+4. **Check logs**: Look for error messages in the console output.
+
+#### Database Errors
+
+If you encounter database-related errors:
+
+1. **Check database path**: Ensure the `DATABASE_PATH` in your `.env` file points to a valid directory.
+2. **Check permissions**: Make sure the bot has write permissions to the database directory.
+3. **Reset database**: If the database is corrupted, you can delete the database file and let the bot recreate it.
