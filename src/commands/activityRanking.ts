@@ -145,6 +145,9 @@ class ActivityRankingHandler {
                 totalUsers
             );
             
+            // Variable to store the summary message for reference
+            let summaryMessage;
+            
             // Send or update the message based on the source
             if (isMessage) {
                 // For message commands, send new messages
@@ -159,13 +162,35 @@ class ActivityRankingHandler {
                             .setStyle(ButtonStyle.Danger)
                     );
                 
-                await channel.send({ 
+                // Send summary message and store its ID
+                summaryMessage = await channel.send({ 
                     content: summaryText,
                     components: [deleteButton]
                 });
+                
+                // Update the buttons to include the summary message ID in the delete button
+                const updatedButtons = new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
+                            .setLabel('Previous')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(page <= 1),
+                        new ButtonBuilder()
+                            .setCustomId(`activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
+                            .setLabel('Next')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(page >= totalPages),
+                        new ButtonBuilder()
+                            .setCustomId(`delete_message:${summaryMessage.id}`)
+                            .setLabel('Delete')
+                            .setStyle(ButtonStyle.Danger)
+                    );
+                
+                // Send ranking message with updated buttons
                 await channel.send({ 
                     content: formattedRanking,
-                    components: [buttons]
+                    components: [updatedButtons]
                 });
             } else {
                 // For button interactions, update the existing message
@@ -178,12 +203,12 @@ class ActivityRankingHandler {
 
             // Add warning if there's a big difference between active and total members
             // Only for initial message commands, not for pagination updates
-            if (isMessage && stats.activeMembers < stats.totalMembers * 0.5) {
-                // Create delete button for warning
+            if (isMessage && stats.activeMembers < stats.totalMembers * 0.5 && summaryMessage) {
+                // Create delete button for warning that also deletes the summary message
                 const deleteButton = new ActionRowBuilder<ButtonBuilder>()
                     .addComponents(
                         new ButtonBuilder()
-                            .setCustomId('delete_message')
+                            .setCustomId(`delete_message:${summaryMessage.id}`)
                             .setLabel('Delete')
                             .setStyle(ButtonStyle.Danger)
                     );

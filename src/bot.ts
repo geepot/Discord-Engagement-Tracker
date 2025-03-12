@@ -83,18 +83,34 @@ class EngagementBot {
                 const customId = buttonInteraction.customId;
                 
                 // Handle delete message button
-                if (customId === 'delete_message') {
+                if (customId.startsWith('delete_message')) {
                     const message = buttonInteraction.message;
+                    const parts = customId.split(':');
+                    
+                    // Delete the current message
                     if (message.deletable) {
                         await message.delete().catch(error => {
                             console.error('Error deleting message:', error);
                         });
-                    } else {
-                        await buttonInteraction.reply({
-                            content: 'I do not have permission to delete this message.',
-                            ephemeral: true
-                        });
                     }
+                    
+                    // If there are related message IDs to delete
+                    if (parts.length > 1) {
+                        for (let i = 1; i < parts.length; i++) {
+                            try {
+                                const relatedMessageId = parts[i];
+                                // Try to fetch and delete the related message
+                                const channel = message.channel;
+                                const relatedMessage = await channel.messages.fetch(relatedMessageId);
+                                if (relatedMessage && relatedMessage.deletable) {
+                                    await relatedMessage.delete();
+                                }
+                            } catch (error) {
+                                console.error('Error deleting related message:', error);
+                            }
+                        }
+                    }
+                    
                     return;
                 }
                 

@@ -3,6 +3,23 @@ import messageTracker from '../services/messageTracker';
 import engagementStats from '../services/engagementStats';
 import { formatMessageSummary, sendLongMessage } from '../utils/formatters';
 
+// Helper function to create a delete button
+function createDeleteButton(relatedMessageIds: string[] = []): ActionRowBuilder<ButtonBuilder> {
+    // Create the custom ID with related message IDs
+    let customId = 'delete_message';
+    if (relatedMessageIds.length > 0) {
+        customId += ':' + relatedMessageIds.join(':');
+    }
+    
+    return new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId(customId)
+                .setLabel('Delete')
+                .setStyle(ButtonStyle.Danger)
+        );
+}
+
 async function handleCheckEngagement(message: Message, messageId?: string): Promise<void> {
     // Ensure we're in a text channel
     if (!(message.channel instanceof TextChannel)) {
@@ -17,18 +34,9 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
             // Check specific message
             const data = messageTracker.getMessage(messageId);
             if (!data) {
-                // Create delete button
-                const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('delete_message')
-                            .setLabel('Delete')
-                            .setStyle(ButtonStyle.Danger)
-                    );
-                
                 await channel.send({
                     content: 'Message not found or not being tracked.',
-                    components: [deleteButton]
+                    components: [createDeleteButton()]
                 });
                 return;
             }
@@ -40,18 +48,9 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
                 const formattedSummary = formatMessageSummary(summary, userDetails);
                 await sendLongMessage(channel, formattedSummary);
             } else {
-                // Create delete button
-                const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('delete_message')
-                            .setLabel('Delete')
-                            .setStyle(ButtonStyle.Danger)
-                    );
-                
                 await channel.send({
                     content: 'Could not generate summary for this message.',
-                    components: [deleteButton]
+                    components: [createDeleteButton()]
                 });
             }
         } else {
@@ -59,36 +58,18 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
             const trackedMessages = messageTracker.getAllMessages();
             
             if (trackedMessages.length === 0) {
-                // Create delete button
-                const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('delete_message')
-                            .setLabel('Delete')
-                            .setStyle(ButtonStyle.Danger)
-                    );
-                
                 await channel.send({
                     content: 'No messages are currently being tracked.',
-                    components: [deleteButton]
+                    components: [createDeleteButton()]
                 });
                 return;
             }
             
             // Warn if there are many messages
             if (trackedMessages.length > 5) {
-                // Create delete button
-                const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('delete_message')
-                            .setLabel('Delete')
-                            .setStyle(ButtonStyle.Danger)
-                    );
-                
                 await channel.send({
                     content: `⚠️ Generating summaries for ${trackedMessages.length} messages. This may take a moment...`,
-                    components: [deleteButton]
+                    components: [createDeleteButton()]
                 });
             }
 
@@ -110,36 +91,18 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
             }
             
             if (processedCount < trackedMessages.length) {
-                // Create delete button
-                const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('delete_message')
-                            .setLabel('Delete')
-                            .setStyle(ButtonStyle.Danger)
-                    );
-                
                 await channel.send({
                     content: `⚠️ Only ${processedCount} of ${trackedMessages.length} messages could be processed.`,
-                    components: [deleteButton]
+                    components: [createDeleteButton()]
                 });
             }
         }
     } catch (error) {
         console.error('Error in handleCheckEngagement:', error);
         
-        // Create delete button
-        const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('delete_message')
-                    .setLabel('Delete')
-                    .setStyle(ButtonStyle.Danger)
-            );
-        
         await channel.send({
             content: 'An error occurred while processing the command.',
-            components: [deleteButton]
+            components: [createDeleteButton()]
         });
     }
 }

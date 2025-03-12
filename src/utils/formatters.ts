@@ -167,19 +167,22 @@ export function formatActivityRanking(
 
 // Split long messages for Discord's character limit
 export async function sendLongMessage(channel: TextChannel, text: string, components?: any[]): Promise<void> {
-    // Create delete button
-    const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-            new ButtonBuilder()
-                .setCustomId('delete_message')
-                .setLabel('Delete')
-                .setStyle(ButtonStyle.Danger)
-        );
-    
-    // Use provided components or default to delete button
-    const messageComponents = components || [deleteButton];
+    // Track sent message IDs for linked deletion
+    const sentMessageIds: string[] = [];
     
     if (text.length <= 1900) {
+        // Create delete button
+        const deleteButton = new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('delete_message')
+                    .setLabel('Delete')
+                    .setStyle(ButtonStyle.Danger)
+            );
+        
+        // Use provided components or default to delete button
+        const messageComponents = components || [deleteButton];
+        
         await channel.send({ 
             content: text, 
             components: messageComponents 
@@ -199,15 +202,28 @@ export async function sendLongMessage(channel: TextChannel, text: string, compon
         text = text.slice(chunk.length);
     }
     
-    // Send all chunks except the last one with delete buttons
+    // Send all chunks except the last one and collect their IDs
     for (let i = 0; i < messages.length - 1; i++) {
-        await channel.send({ 
+        const sentMessage = await channel.send({ 
             content: messages[i], 
-            components: [deleteButton] 
+            components: [] // No buttons on intermediate messages
         });
+        sentMessageIds.push(sentMessage.id);
     }
     
-    // Send the last chunk with provided components or delete button
+    // Create delete button that deletes all related messages
+    const deleteButton = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId(`delete_message:${sentMessageIds.join(':')}`)
+                .setLabel('Delete')
+                .setStyle(ButtonStyle.Danger)
+        );
+    
+    // Use provided components or default to delete button
+    const messageComponents = components || [deleteButton];
+    
+    // Send the last chunk with delete button that deletes all related messages
     await channel.send({ 
         content: messages[messages.length - 1], 
         components: messageComponents 
