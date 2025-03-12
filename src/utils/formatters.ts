@@ -10,7 +10,7 @@ export function formatMessageSummary(summary: MessageSummary, userDetails: UserM
 
 // Format read users table
 if (userDetails.readUsers.length > 0) {
-    text += '**Users who have read:**\n```\n';
+    text += '**Users who have reacted (marked as read):**\n```\n';
     text += 'Username'.padEnd(20) + 'Reactions\n';
     text += '─'.repeat(40) + '\n';
     
@@ -49,7 +49,7 @@ if (userDetails.readUsers.length > 0) {
 
 // Format unread users table
 if (userDetails.unreadUsers.length > 0) {
-    text += '**Users who have not read:**\n```\n';
+    text += '**Users who have not reacted (marked as unread):**\n```\n';
     text += 'Username\n';
     text += '─'.repeat(20) + '\n';
     
@@ -118,9 +118,9 @@ export function formatActivityRanking(
     const maxMessageLength = 1900;
     const headerLength = text.length;
     const legendText = '\n' + '─'.repeat(53) + '\n' +
-                       'Messages: Number of messages read\n' +
-                       'Reactions: Total reactions given\n' +
-                       'Early: Times among first 25% to read\n' +
+                       'Messages: Number of messages reacted to\n' +
+                       'Reactions: Total reactions given (can be multiple per message)\n' +
+                       'Early: Times among first 25% to react to a message\n' +
                        'Score: Weighted activity score\n';
     const legendLength = legendText.length + '```'.length;
     const andMoreText = '\nand xxx more'.length;
@@ -156,9 +156,9 @@ export function formatActivityRanking(
 
     // Legend
     text += '\n' + '─'.repeat(53) + '\n';
-    text += 'Messages: Number of messages read\n';
-    text += 'Reactions: Total reactions given\n';
-    text += 'Early: Times among first 25% to read\n';
+    text += 'Messages: Number of messages reacted to\n';
+    text += 'Reactions: Total reactions given (can be multiple per message)\n';
+    text += 'Early: Times among first 25% to react to a message\n';
     text += 'Score: Weighted activity score\n';
     
     text += '```';
