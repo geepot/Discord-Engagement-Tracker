@@ -121,12 +121,12 @@ class ActivityRankingHandler {
             const buttons = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
                     new ButtonBuilder()
-                        .setCustomId(`activity_ranking:prev:${isActive}:${count}:${page}`)
+                        .setCustomId(`activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
                         .setLabel('Previous')
                         .setStyle(ButtonStyle.Primary)
                         .setDisabled(page <= 1),
                     new ButtonBuilder()
-                        .setCustomId(`activity_ranking:next:${isActive}:${count}:${page}`)
+                        .setCustomId(`activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
                         .setLabel('Next')
                         .setStyle(ButtonStyle.Primary)
                         .setDisabled(page >= totalPages)

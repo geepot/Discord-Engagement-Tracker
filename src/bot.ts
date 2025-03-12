@@ -90,16 +90,14 @@ class EngagementBot {
                     const page = parseInt(pageStr);
                     
                     if (action === 'prev' || action === 'next') {
-                        const newPage = action === 'prev' ? Math.max(1, page - 1) : page + 1;
-                        
                         // Defer the reply to avoid interaction timeout
                         await buttonInteraction.deferUpdate();
                         
                         // Handle the pagination based on whether it's most active or most inactive
                         if (isActive) {
-                            await handleMostActive(buttonInteraction, count, newPage);
+                            await handleMostActive(buttonInteraction, count, page);
                         } else {
-                            await handleMostInactive(buttonInteraction, count, newPage);
+                            await handleMostInactive(buttonInteraction, count, page);
                         }
                     }
                 }

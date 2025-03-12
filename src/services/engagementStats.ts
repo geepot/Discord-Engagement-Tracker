@@ -128,7 +128,7 @@ class EngagementStats {
                 throw new Error('No user statistics available');
             }
 
-            return Array.from(userStats.entries())
+            const sortedUsers = Array.from(userStats.entries())
                 .map(([userId, stats]) => ({
                     userId,
                     username: stats.username,
@@ -140,11 +140,17 @@ class EngagementStats {
                 }))
                 .sort((a, b) => mostActive ? 
                     b.activityScore - a.activityScore : 
-                    a.activityScore - b.activityScore)
-                .slice(
-                    (page - 1) * config.defaults.pageSize, 
-                    Math.min(page * config.defaults.pageSize, count, userStats.size)
-                );
+                    a.activityScore - b.activityScore);
+            
+            // Calculate valid page number
+            const totalPages = Math.ceil(sortedUsers.length / config.defaults.pageSize);
+            const validPage = Math.max(1, Math.min(page, totalPages));
+            
+            // Apply pagination
+            return sortedUsers.slice(
+                (validPage - 1) * config.defaults.pageSize, 
+                Math.min(validPage * config.defaults.pageSize, count, userStats.size)
+            );
         } catch (error) {
             console.error('Error generating activity ranking:', error);
             throw new Error('Failed to generate activity rankings');
