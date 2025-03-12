@@ -110,12 +110,11 @@ class EngagementStats {
     private calculateActivityScore(stats: UserStats, totalMessages: number): number {
         const metrics = config.engagement.metrics;
         const readScore = stats.readCount * metrics.readWeight;
-        const reactionScore = stats.totalReactions * metrics.reactionWeight;
         const earlyReaderScore = stats.firstReadCount * metrics.firstReadBonus;
         
         // Normalize scores based on total messages
         const normalizedScore = totalMessages > 0 ? 
-            (readScore + reactionScore + earlyReaderScore) / totalMessages : 0;
+            (readScore + earlyReaderScore) / totalMessages : 0;
         
         return Math.round(normalizedScore * 100) / 100; // Round to 2 decimal places
     }

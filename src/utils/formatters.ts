@@ -121,7 +121,7 @@ export function formatActivityRanking(
                        'Messages: Number of messages reacted to\n' +
                        'Reactions: Total reactions given (can be multiple per message)\n' +
                        'Early: Times among first 25% to react to a message\n' +
-                       'Score: Weighted activity score\n';
+                       'Score: Weighted score based on messages and early reactions\n';
     const legendLength = legendText.length + '```'.length;
     const andMoreText = '\nand xxx more'.length;
     const maxListLength = maxMessageLength - headerLength - legendLength - andMoreText;
@@ -159,7 +159,7 @@ export function formatActivityRanking(
     text += 'Messages: Number of messages reacted to\n';
     text += 'Reactions: Total reactions given (can be multiple per message)\n';
     text += 'Early: Times among first 25% to react to a message\n';
-    text += 'Score: Weighted activity score\n';
+    text += 'Score: Weighted score based on messages and early reactions\n';
     
     text += '```';
     return text;
