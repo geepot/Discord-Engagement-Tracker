@@ -37,7 +37,12 @@ class EngagementBot {
         // Message creation
         this.client.on(Events.MessageCreate, async (message: Message) => {
             if (config.trackedChannelId && message.channel.id === config.trackedChannelId && message.channel instanceof TextChannel) {
-                const channelMembersList = await message.channel.guild.members.fetch();
+                const allMembers = await message.channel.guild.members.fetch();
+                // Filter members to only include those who can access the channel
+                const channelMembersList = allMembers.filter(member => 
+                    message.channel instanceof TextChannel && 
+                    message.channel.permissionsFor(member)?.has('ViewChannel')
+                );
                 messageTracker.trackMessage(message, channelMembersList);
             }
 
@@ -87,7 +92,11 @@ class EngagementBot {
             const messages = await channel.messages.fetch({ 
                 limit: config.defaults.messagesFetchLimit 
             });
-            const channelMembersList = await channel.guild.members.fetch();
+            const allMembers = await channel.guild.members.fetch();
+            // Filter members to only include those who can access the channel
+            const channelMembersList = allMembers.filter(member => 
+                channel.permissionsFor(member)?.has('ViewChannel')
+            );
 
             for (const [_, message] of messages) {
                 messageTracker.trackMessage(message, channelMembersList);
