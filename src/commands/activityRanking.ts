@@ -1,4 +1,4 @@
-import { Message, TextChannel, ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageCreateOptions, InteractionResponse, MessagePayload, MessageEditOptions } from 'discord.js';
+import { Message, TextChannel, ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageCreateOptions, InteractionResponse, MessagePayload, MessageEditOptions, MessageComponentInteraction } from 'discord.js';
 import messageTracker from '../services/messageTracker';
 import engagementStats from '../services/engagementStats';
 import { formatActivityRanking, sendLongMessage } from '../utils/formatters';
@@ -116,7 +116,7 @@ class ActivityRankingHandler {
                 return;
             }
 
-            // Create pagination buttons
+            // Create pagination and delete buttons
             const totalPages = Math.ceil(totalUsers / config.defaults.pageSize);
             const buttons = new ActionRowBuilder<ButtonBuilder>()
                 .addComponents(
@@ -129,7 +129,11 @@ class ActivityRankingHandler {
                         .setCustomId(`activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
                         .setLabel('Next')
                         .setStyle(ButtonStyle.Primary)
-                        .setDisabled(page >= totalPages)
+                        .setDisabled(page >= totalPages),
+                    new ButtonBuilder()
+                        .setCustomId('delete_message')
+                        .setLabel('Delete')
+                        .setStyle(ButtonStyle.Danger)
                 );
             
             // Format the ranking text
@@ -145,7 +149,20 @@ class ActivityRankingHandler {
             if (isMessage) {
                 // For message commands, send new messages
                 const summaryText = await this.generateSummaryText(stats, isActive);
-                await channel.send(summaryText);
+                
+                // Create delete button for summary
+                const deleteButton = new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('delete_message')
+                            .setLabel('Delete')
+                            .setStyle(ButtonStyle.Danger)
+                    );
+                
+                await channel.send({ 
+                    content: summaryText,
+                    components: [deleteButton]
+                });
                 await channel.send({ 
                     content: formattedRanking,
                     components: [buttons]
@@ -162,10 +179,20 @@ class ActivityRankingHandler {
             // Add warning if there's a big difference between active and total members
             // Only for initial message commands, not for pagination updates
             if (isMessage && stats.activeMembers < stats.totalMembers * 0.5) {
-                await channel.send(
-                    '⚠️ **Note:** Less than 50% of members have activity. ' +
-                    'Rankings might not represent overall channel engagement.'
-                );
+                // Create delete button for warning
+                const deleteButton = new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('delete_message')
+                            .setLabel('Delete')
+                            .setStyle(ButtonStyle.Danger)
+                    );
+                
+                await channel.send({
+                    content: '⚠️ **Note:** Less than 50% of members have activity. ' +
+                             'Rankings might not represent overall channel engagement.',
+                    components: [deleteButton]
+                });
             }
 
         } catch (error) {
@@ -175,7 +202,19 @@ class ActivityRankingHandler {
                 (error.message.includes('Please provide') || error.message.includes('Maximum allowed'))) {
                 
                 if (isMessage) {
-                    await channel.send(error.message);
+                    // Create delete button for error message
+                    const deleteButton = new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('delete_message')
+                                .setLabel('Delete')
+                                .setStyle(ButtonStyle.Danger)
+                        );
+                    
+                    await channel.send({
+                        content: error.message,
+                        components: [deleteButton]
+                    });
                 } else {
                     await (source as ButtonInteraction).editReply({
                         content: error.message,
@@ -184,7 +223,19 @@ class ActivityRankingHandler {
                 }
             } else {
                 if (isMessage) {
-                    await channel.send('An error occurred while generating activity ranking.');
+                    // Create delete button for error message
+                    const deleteButton = new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('delete_message')
+                                .setLabel('Delete')
+                                .setStyle(ButtonStyle.Danger)
+                        );
+                    
+                    await channel.send({
+                        content: 'An error occurred while generating activity ranking.',
+                        components: [deleteButton]
+                    });
                 } else {
                     await (source as ButtonInteraction).editReply({
                         content: 'An error occurred while generating activity ranking.',

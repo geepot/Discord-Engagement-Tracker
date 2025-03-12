@@ -82,6 +82,22 @@ class EngagementBot {
                 const buttonInteraction = interaction as ButtonInteraction;
                 const customId = buttonInteraction.customId;
                 
+                // Handle delete message button
+                if (customId === 'delete_message') {
+                    const message = buttonInteraction.message;
+                    if (message.deletable) {
+                        await message.delete().catch(error => {
+                            console.error('Error deleting message:', error);
+                        });
+                    } else {
+                        await buttonInteraction.reply({
+                            content: 'I do not have permission to delete this message.',
+                            ephemeral: true
+                        });
+                    }
+                    return;
+                }
+                
                 // Handle activity ranking pagination buttons
                 if (customId.startsWith('activity_ranking:')) {
                     const [_, action, isActiveStr, countStr, pageStr] = customId.split(':');
@@ -154,11 +170,13 @@ class EngagementBot {
         
         // Check if user has permission to use this command
         if (!hasCommandPermission(message, command)) {
-            await message.reply('You do not have permission to use this command.');
+            const reply = await message.reply('You do not have permission to use this command.');
+            this.addDeleteButton(reply);
             return;
         }
         
         try {
+            // Process the command
             switch (command) {
                 case config.commands.checkEngagement: {
                     const messageId = message.content.split(' ')[1];
@@ -190,12 +208,39 @@ class EngagementBot {
                     // Unknown command
                     break;
             }
+            
+            // Delete the command message after processing
+            if (message.deletable) {
+                await message.delete().catch(error => {
+                    console.error('Error deleting command message:', error);
+                });
+            }
         } catch (error) {
             console.error(`Error handling command ${command}:`, error);
             if (message.channel instanceof TextChannel) {
                 await message.channel.send('An error occurred while processing the command.');
             }
         }
+    }
+
+    // Add a delete button to a message
+    private addDeleteButton(message: Message): void {
+        // Import necessary classes from discord.js
+        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+        
+        // Create a delete button
+        const deleteButton = new ButtonBuilder()
+            .setCustomId('delete_message')
+            .setLabel('Delete')
+            .setStyle(ButtonStyle.Danger);
+        
+        // Create an action row with the delete button
+        const row = new ActionRowBuilder().addComponents(deleteButton);
+        
+        // Edit the message to add the button
+        message.edit({ components: [row] }).catch(error => {
+            console.error('Error adding delete button:', error);
+        });
     }
 
     // Handle graceful shutdown
