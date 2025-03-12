@@ -1,4 +1,4 @@
-import { Message, TextChannel } from 'discord.js';
+import { Message, TextChannel, ButtonInteraction, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageCreateOptions, InteractionResponse, MessagePayload, MessageEditOptions } from 'discord.js';
 import messageTracker from '../services/messageTracker';
 import engagementStats from '../services/engagementStats';
 import { formatActivityRanking, sendLongMessage } from '../utils/formatters';
@@ -47,15 +47,30 @@ class ActivityRankingHandler {
     }
 
 
-    public async handleActivityRanking(message: Message, isActive = true): Promise<void> {
-        // Ensure we're in a text channel
-        if (!(message.channel instanceof TextChannel)) {
-            await message.reply('This command can only be used in text channels.');
-            return;
+    public async handleActivityRanking(
+        source: Message | ButtonInteraction, 
+        isActive = true,
+        initialCount?: number,
+        initialPage?: number
+    ): Promise<void> {
+        // Determine if this is a message command or button interaction
+        const isMessage = source instanceof Message;
+        
+        // Get the channel
+        let channel: TextChannel;
+        if (isMessage) {
+            if (!(source.channel instanceof TextChannel)) {
+                await source.reply('This command can only be used in text channels.');
+                return;
+            }
+            channel = source.channel;
+        } else {
+            if (!(source.channel instanceof TextChannel)) {
+                await source.reply({ content: 'This interaction can only be used in text channels.', ephemeral: true });
+                return;
+            }
+            channel = source.channel;
         }
-
-
-        const channel = message.channel;
 
         try {
             // Check if there are messages being tracked
@@ -65,16 +80,20 @@ class ActivityRankingHandler {
             }
 
             // Parse and validate count and page
-            const args = message.content.split(' ');
-            let count = config.defaults.activityRankingCount;
-            let page = 1;
-
-            if (args[1]) {
-                count = parseInt(args[1]);
-            }
+            let count = initialCount || config.defaults.activityRankingCount;
+            let page = initialPage || 1;
             
-            if (args[2]) {
-                page = parseInt(args[2]);
+            if (isMessage) {
+                const message = source as Message;
+                const args = message.content.split(' ');
+                
+                if (args[1]) {
+                    count = parseInt(args[1]);
+                }
+                
+                if (args[2]) {
+                    page = parseInt(args[2]);
+                }
             }
             
             this.validateInput(count, page);
@@ -97,10 +116,23 @@ class ActivityRankingHandler {
                 return;
             }
 
-            // Send summary and rankings
-            const summaryText = await this.generateSummaryText(stats, isActive);
-            await channel.send(summaryText);
-
+            // Create pagination buttons
+            const totalPages = Math.ceil(totalUsers / config.defaults.pageSize);
+            const buttons = new ActionRowBuilder<ButtonBuilder>()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`activity_ranking:prev:${isActive}:${count}:${page}`)
+                        .setLabel('Previous')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(page <= 1),
+                    new ButtonBuilder()
+                        .setCustomId(`activity_ranking:next:${isActive}:${count}:${page}`)
+                        .setLabel('Next')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(page >= totalPages)
+                );
+            
+            // Format the ranking text
             const formattedRanking = formatActivityRanking(
                 rankedUsers, 
                 count, 
@@ -108,10 +140,28 @@ class ActivityRankingHandler {
                 page, 
                 totalUsers
             );
-            await sendLongMessage(channel, formattedRanking);
+            
+            // Send or update the message based on the source
+            if (isMessage) {
+                // For message commands, send new messages
+                const summaryText = await this.generateSummaryText(stats, isActive);
+                await channel.send(summaryText);
+                await channel.send({ 
+                    content: formattedRanking,
+                    components: [buttons]
+                });
+            } else {
+                // For button interactions, update the existing message
+                const buttonInteraction = source as ButtonInteraction;
+                await buttonInteraction.editReply({
+                    content: formattedRanking,
+                    components: [buttons]
+                });
+            }
 
             // Add warning if there's a big difference between active and total members
-            if (stats.activeMembers < stats.totalMembers * 0.5) {
+            // Only for initial message commands, not for pagination updates
+            if (isMessage && stats.activeMembers < stats.totalMembers * 0.5) {
                 await channel.send(
                     '⚠️ **Note:** Less than 50% of members have activity. ' +
                     'Rankings might not represent overall channel engagement.'
@@ -119,12 +169,28 @@ class ActivityRankingHandler {
             }
 
         } catch (error) {
+            console.error('Error generating activity ranking:', error);
+            
             if (error instanceof Error && 
                 (error.message.includes('Please provide') || error.message.includes('Maximum allowed'))) {
-                await channel.send(error.message);
+                
+                if (isMessage) {
+                    await channel.send(error.message);
+                } else {
+                    await (source as ButtonInteraction).editReply({
+                        content: error.message,
+                        components: []
+                    });
+                }
             } else {
-                console.error('Error generating activity ranking:', error);
-                await channel.send('An error occurred while generating activity ranking.');
+                if (isMessage) {
+                    await channel.send('An error occurred while generating activity ranking.');
+                } else {
+                    await (source as ButtonInteraction).editReply({
+                        content: 'An error occurred while generating activity ranking.',
+                        components: []
+                    });
+                }
             }
         }
     }
@@ -132,5 +198,14 @@ class ActivityRankingHandler {
 
 const handler = new ActivityRankingHandler();
 
-export const handleMostActive = (message: Message) => handler.handleActivityRanking(message, true);
-export const handleMostInactive = (message: Message) => handler.handleActivityRanking(message, false);
+export const handleMostActive = (
+    source: Message | ButtonInteraction,
+    count?: number,
+    page?: number
+) => handler.handleActivityRanking(source, true, count, page);
+
+export const handleMostInactive = (
+    source: Message | ButtonInteraction,
+    count?: number,
+    page?: number
+) => handler.handleActivityRanking(source, false, count, page);

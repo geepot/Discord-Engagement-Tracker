@@ -1,4 +1,4 @@
-import { Client, Events, Message, GatewayIntentBits, TextChannel, GuildTextBasedChannel } from 'discord.js';
+import { Client, Events, Message, GatewayIntentBits, TextChannel, GuildTextBasedChannel, Interaction, ButtonInteraction } from 'discord.js';
 import config from './config';
 import messageTracker from './services/messageTracker';
 import database from './services/database';
@@ -71,6 +71,48 @@ class EngagementBot {
         this.client.on(Events.MessageReactionRemove, async (reaction, user) => {
             if (config.trackedChannelId && reaction.message.channel.id === config.trackedChannelId) {
                 messageTracker.removeReaction(reaction.message.id, reaction.emoji.name, user.id);
+            }
+        });
+        
+        // Button interaction handler
+        this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+            if (!interaction.isButton()) return;
+            
+            try {
+                const buttonInteraction = interaction as ButtonInteraction;
+                const customId = buttonInteraction.customId;
+                
+                // Handle activity ranking pagination buttons
+                if (customId.startsWith('activity_ranking:')) {
+                    const [_, action, isActiveStr, countStr, pageStr] = customId.split(':');
+                    const isActive = isActiveStr === 'true';
+                    const count = parseInt(countStr);
+                    const page = parseInt(pageStr);
+                    
+                    if (action === 'prev' || action === 'next') {
+                        const newPage = action === 'prev' ? Math.max(1, page - 1) : page + 1;
+                        
+                        // Defer the reply to avoid interaction timeout
+                        await buttonInteraction.deferUpdate();
+                        
+                        // Handle the pagination based on whether it's most active or most inactive
+                        if (isActive) {
+                            await handleMostActive(buttonInteraction, count, newPage);
+                        } else {
+                            await handleMostInactive(buttonInteraction, count, newPage);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error handling button interaction:', error);
+                
+                // If the interaction hasn't been responded to yet, send an error message
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ 
+                        content: 'An error occurred while processing this interaction.', 
+                        ephemeral: true 
+                    });
+                }
             }
         });
     }

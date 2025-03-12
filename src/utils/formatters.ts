@@ -166,9 +166,13 @@ export function formatActivityRanking(
 }
 
 // Split long messages for Discord's character limit
-export async function sendLongMessage(channel: TextChannel, text: string): Promise<void> {
+export async function sendLongMessage(channel: TextChannel, text: string, components?: any[]): Promise<void> {
     if (text.length <= 1900) {
-        await channel.send(text);
+        if (components) {
+            await channel.send({ content: text, components });
+        } else {
+            await channel.send(text);
+        }
         return;
     }
 
@@ -184,7 +188,18 @@ export async function sendLongMessage(channel: TextChannel, text: string): Promi
         text = text.slice(chunk.length);
     }
     
-    for (const msg of messages) {
-        await channel.send(msg);
+    // Send all chunks except the last one without components
+    for (let i = 0; i < messages.length - 1; i++) {
+        await channel.send(messages[i]);
+    }
+    
+    // Send the last chunk with components if provided
+    if (components) {
+        await channel.send({ 
+            content: messages[messages.length - 1], 
+            components 
+        });
+    } else {
+        await channel.send(messages[messages.length - 1]);
     }
 }
