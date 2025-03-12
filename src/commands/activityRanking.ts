@@ -20,8 +20,12 @@ class ActivityRankingHandler {
         }
     }
 
-    private async getChannelStats(channelId: string) {
-        const members = messageTracker.getChannelMembers(channelId);
+    private async getChannelStats() {
+        // Always use the tracked channel ID from config
+        const trackedChannelId = config.trackedChannelId;
+        if (!trackedChannelId) return null;
+        
+        const members = messageTracker.getChannelMembers(trackedChannelId);
         if (!members) return null;
 
         return {
@@ -76,7 +80,7 @@ class ActivityRankingHandler {
             this.validateInput(count, page);
 
             // Get channel statistics
-            const stats = await this.getChannelStats(channel.id);
+            const stats = await this.getChannelStats();
             if (!stats) {
                 await channel.send('Could not fetch channel statistics.');
                 return;
