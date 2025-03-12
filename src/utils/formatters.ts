@@ -1,4 +1,4 @@
-import { TextChannel } from 'discord.js';
+import { TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { MessageSummary, UserMessageDetails, ActivityRankingResult } from '../types';
 import config from '../config';
 
@@ -167,12 +167,23 @@ export function formatActivityRanking(
 
 // Split long messages for Discord's character limit
 export async function sendLongMessage(channel: TextChannel, text: string, components?: any[]): Promise<void> {
+    // Create delete button
+    const deleteButton = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('delete_message')
+                .setLabel('Delete')
+                .setStyle(ButtonStyle.Danger)
+        );
+    
+    // Use provided components or default to delete button
+    const messageComponents = components || [deleteButton];
+    
     if (text.length <= 1900) {
-        if (components) {
-            await channel.send({ content: text, components });
-        } else {
-            await channel.send(text);
-        }
+        await channel.send({ 
+            content: text, 
+            components: messageComponents 
+        });
         return;
     }
 
@@ -188,18 +199,17 @@ export async function sendLongMessage(channel: TextChannel, text: string, compon
         text = text.slice(chunk.length);
     }
     
-    // Send all chunks except the last one without components
+    // Send all chunks except the last one with delete buttons
     for (let i = 0; i < messages.length - 1; i++) {
-        await channel.send(messages[i]);
+        await channel.send({ 
+            content: messages[i], 
+            components: [deleteButton] 
+        });
     }
     
-    // Send the last chunk with components if provided
-    if (components) {
-        await channel.send({ 
-            content: messages[messages.length - 1], 
-            components 
-        });
-    } else {
-        await channel.send(messages[messages.length - 1]);
-    }
+    // Send the last chunk with provided components or delete button
+    await channel.send({ 
+        content: messages[messages.length - 1], 
+        components: messageComponents 
+    });
 }
