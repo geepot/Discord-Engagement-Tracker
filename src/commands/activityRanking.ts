@@ -107,7 +107,7 @@ class ActivityRankingHandler {
 
             // Calculate total users for pagination
             const allStats = await engagementStats.calculateUserStats();
-            const totalUsers = allStats.size;
+            const totalUsers = Math.min(allStats.size, count); // Limit to requested count
             
             // Generate rankings for the requested page
             const rankedUsers = await engagementStats.getActivityRanking(count, isActive, page);

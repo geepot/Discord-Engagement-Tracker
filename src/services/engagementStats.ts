@@ -141,14 +141,17 @@ class EngagementStats {
                     b.activityScore - a.activityScore : 
                     a.activityScore - b.activityScore);
             
-            // Calculate valid page number
-            const totalPages = Math.ceil(sortedUsers.length / config.defaults.pageSize);
+            // Limit to requested count first
+            const limitedUsers = sortedUsers.slice(0, count);
+            
+            // Calculate valid page number based on limited users
+            const totalPages = Math.ceil(limitedUsers.length / config.defaults.pageSize);
             const validPage = Math.max(1, Math.min(page, totalPages));
             
-            // Apply pagination
-            return sortedUsers.slice(
+            // Apply pagination to limited users
+            return limitedUsers.slice(
                 (validPage - 1) * config.defaults.pageSize, 
-                Math.min(validPage * config.defaults.pageSize, count, userStats.size)
+                validPage * config.defaults.pageSize
             );
         } catch (error) {
             console.error('Error generating activity ranking:', error);
