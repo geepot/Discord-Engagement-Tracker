@@ -1,4 +1,4 @@
-import { Message, TextChannel, ButtonInteraction, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { Message, TextChannel, ButtonInteraction, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import messageTracker from '../services/messageTracker';
 import engagementStats from '../services/engagementStats';
 import { formatActivityRanking } from '../utils/formatters';
@@ -156,7 +156,7 @@ class ActivityRankingHandler {
             // Create pagination buttons
             const paginationButtons = this.createPaginationButtons(isActive, count, page, totalPages);
             
-            // Send or update the message based on the source
+            // Handle message command vs button interaction
             if (isMessage) {
                 // Create a message manager for this command
                 const messageManager = new CommandMessageManager(channel);
@@ -165,7 +165,7 @@ class ActivityRankingHandler {
                 const summaryText = await this.generateSummaryText(stats, isActive);
                 
                 // Send summary message without delete button
-                await messageManager.sendMessage(summaryText);
+                const summaryMessage = await messageManager.sendMessage(summaryText);
                 
                 // Send ranking message with pagination buttons
                 await messageManager.sendMessage(formattedRanking);
@@ -178,30 +178,77 @@ class ActivityRankingHandler {
                     );
                 }
                 
+                // Create new pagination buttons with the summary message ID included
+                const updatedPaginationButtons = [
+                    new ButtonBuilder()
+                        .setCustomId(`activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessage.id}`)
+                        .setLabel('Previous')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(page <= 1),
+                    new ButtonBuilder()
+                        .setCustomId(`activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessage.id}`)
+                        .setLabel('Next')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(page >= totalPages)
+                ];
+                
                 // Add delete button to the last message that will delete all messages
-                await messageManager.addDeleteButtonToLastMessage(paginationButtons);
+                await messageManager.addDeleteButtonToLastMessage(updatedPaginationButtons);
             } else {
                 // For button interactions, update the existing message
                 const buttonInteraction = source as ButtonInteraction;
                 
-                // Create pagination buttons with delete button
-                const buttons = [...paginationButtons, 
-                    new ButtonBuilder()
-                        .setCustomId('delete_message')
-                        .setLabel('Delete')
-                        .setStyle(ButtonStyle.Danger)
-                ];
+                // Extract the summary message ID from the custom ID
+                const customIdParts = buttonInteraction.customId.split(':');
+                const summaryMessageId = customIdParts.length > 5 ? customIdParts[5] : null;
                 
-                // Update the message with new content and buttons
-                await buttonInteraction.editReply({
-                    content: formattedRanking,
-                    components: [
-                        {
-                            type: 1,
-                            components: buttons.map(button => button.toJSON())
-                        }
-                    ]
-                });
+                if (summaryMessageId) {
+                    // Create new pagination buttons with the summary message ID included
+                    const updatedPaginationButtons = [
+                        new ButtonBuilder()
+                            .setCustomId(`activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessageId}`)
+                            .setLabel('Previous')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(page <= 1),
+                        new ButtonBuilder()
+                            .setCustomId(`activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessageId}`)
+                            .setLabel('Next')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(page >= totalPages)
+                    ];
+                    
+                    // Create a delete button that will delete both the current message and the summary message
+                    const deleteButton = new ButtonBuilder()
+                        .setCustomId(`delete_message:${summaryMessageId}`)
+                        .setLabel('Delete')
+                        .setStyle(ButtonStyle.Danger);
+                    
+                    // Create an action row with the updated buttons
+                    const actionRow = new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents([...updatedPaginationButtons, deleteButton]);
+                    
+                    // Update the message with new content and buttons
+                    await buttonInteraction.editReply({
+                        content: formattedRanking,
+                        components: [actionRow]
+                    });
+                } else {
+                    // If no summary message ID is found, just use the pagination buttons
+                    const actionRow = new ActionRowBuilder<ButtonBuilder>()
+                        .addComponents([
+                            ...paginationButtons,
+                            new ButtonBuilder()
+                                .setCustomId('delete_message')
+                                .setLabel('Delete')
+                                .setStyle(ButtonStyle.Danger)
+                        ]);
+                    
+                    // Update the message with new content and buttons
+                    await buttonInteraction.editReply({
+                        content: formattedRanking,
+                        components: [actionRow]
+                    });
+                }
             }
         } catch (error) {
             console.error('Error generating activity ranking:', error);
