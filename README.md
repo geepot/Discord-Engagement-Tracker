@@ -6,7 +6,8 @@ A Discord bot that tracks message engagement in specified channels, including:
 - Message read/unread status tracking
 - SQLite database persistence
 - Scheduled reports
-- Customizable command prefixes
+- Discord slash commands support
+- Interactive components (buttons, modals)
 
 ## Features
 
@@ -17,7 +18,7 @@ A Discord bot that tracks message engagement in specified channels, including:
 - Persists data in SQLite database for reliability
 - Supports pagination for large servers
 - Scheduled automated reports (daily, weekly, monthly)
-- Customizable command prefixes per server
+- Discord slash commands with intuitive options
 - Permission-based command access
 - Memory management with automatic cleanup of old messages
 
@@ -35,12 +36,12 @@ A Discord bot that tracks message engagement in specified channels, including:
    ```
 5. Configure your environment variables in `.env`:
    - `DISCORD_BOT_TOKEN`: Your Discord bot token
-   - `TRACKED_CHANNEL_ID`: (Optional) ID of the channel you want to monitor (can be set via `!setup` command)
+   - `TRACKED_CHANNEL_ID`: (Optional) ID of the channel you want to monitor (can be set via `/setup` command)
    - `ADMIN_CHANNEL_ID`: (Optional) Channel for admin notifications
-   - `COMMAND_PREFIX`: (Optional) Default command prefix
+   - `COMMAND_PREFIX`: (Optional) Legacy setting, no longer needed for slash commands
    - `ADMIN_ROLE_IDS`: (Optional) Comma-separated list of role IDs that can use admin commands
    - `MOD_ROLE_IDS`: (Optional) Comma-separated list of role IDs that can use mod commands
-   - `DATABASE_PATH`: (Optional) Path to SQLite database file
+   - `DATABASE_PATH`: Path to SQLite database file
 6. Build the TypeScript code:
    ```bash
    npm run build
@@ -70,18 +71,21 @@ The bot needs the following permissions:
 - View Channel
 - Add Reactions
 - Manage Messages
+- Use Application Commands (for slash commands)
 
 ## Commands
 
+The bot now uses Discord's slash commands system for improved user experience and security.
+
 ### Engagement Tracking
 
-- `!check-engagement [messageId]` - Shows engagement statistics for messages:
+- `/check-engagement [messageId]` - Shows engagement statistics for messages:
   - Without messageId: Shows statistics for all tracked messages
   - With messageId: Shows statistics for the specific message
 
 ### Activity Ranking
 
-- `!most-active [count] [page]` - Shows the most active users, sorted by activity score:
+- `/most-active [count] [page]` - Shows the most active users, sorted by activity score:
   - Lists users with highest engagement (default: top 10, max 100)
   - Shows channel statistics (total members, active members)
   - Shows detailed engagement metrics:
@@ -90,42 +94,39 @@ The bot needs the following permissions:
     * Early reader count (first 25% to read)
     * Weighted activity score
   - Includes scoring system explanation
+  - Interactive pagination buttons
   - Optional count parameter to show more/less users
   - Optional page parameter for pagination
   - Warns if channel has low overall engagement
 
-- `!most-inactive [count] [page]` - Shows the least active users, sorted by activity score:
+- `/most-inactive [count] [page]` - Shows the least active users, sorted by activity score:
   - Lists users with lowest engagement (default: top 10, max 100)
   - Shows channel statistics (total members, active members)
   - Shows messages read count
   - Shows total reactions count
   - Displays overall activity score
   - Includes engagement metrics explanation
+  - Interactive pagination buttons
   - Optional count parameter to show more/less users
   - Optional page parameter for pagination
   - Warns if channel has low overall engagement
 
 ### Admin Commands
 
-- `!setup` - Interactive setup wizard with graphical interface:
+- `/setup` - Interactive setup wizard with graphical interface:
   - Requires Administrator permission
   - Configure tracked channel
-  - Set command prefix
   - Configure role permissions
   - Test configuration
 
-- `!set-prefix <new_prefix>` - Changes the command prefix for the server:
-  - Requires Administrator permission
-  - Prefix must be 3 characters or less
-  - Example: `!set-prefix ?` changes commands to start with `?`
-
-- `!schedule-report <frequency> <type>` - Schedules automated reports:
+- `/schedule-report [frequency] [type]` - Schedules automated reports:
   - Requires Administrator permission
   - Frequencies: `daily`, `weekly`, `monthly`
   - Report types: `engagement`, `activity`
-  - Example: `!schedule-report daily activity`
-  - List scheduled reports: `!schedule-report list`
-  - Delete a report: `!schedule-report delete <report_id>`
+  - Subcommands:
+    * `/schedule-report create` - Create a new scheduled report
+    * `/schedule-report list` - List all scheduled reports
+    * `/schedule-report delete` - Delete a scheduled report
 
 ### Example Outputs
 
@@ -199,21 +200,20 @@ The bot needs the following permissions:
   📊 **End of Activity Report**
   ```
 
-### Command Examples
+### Slash Command Examples
 
 ```
-!check-engagement                    # Check all messages
-!check-engagement 123456789123456    # Check specific message
-!most-active                         # Show top 10 most active users
-!most-active 20                      # Show top 20 most active users
-!most-active 20 2                    # Show second page of top 20 most active users
-!most-inactive                       # Show top 10 least active users
-!most-inactive 5                     # Show top 5 least active users
-!set-prefix ?                        # Change command prefix to ?
-!schedule-report daily activity      # Schedule daily activity report
-!schedule-report weekly engagement   # Schedule weekly engagement report
-!schedule-report list                # List all scheduled reports
-!schedule-report delete 1            # Delete scheduled report with ID 1
+/check-engagement                    # Check all messages
+/check-engagement messageId:123456789123456    # Check specific message
+/most-active                         # Show top 10 most active users
+/most-active count:20                # Show top 20 most active users
+/most-active count:20 page:2         # Show second page of top 20 most active users
+/most-inactive                       # Show top 10 least active users
+/most-inactive count:5               # Show top 5 least active users
+/schedule-report create frequency:daily type:activity    # Schedule daily activity report
+/schedule-report create frequency:weekly type:engagement # Schedule weekly engagement report
+/schedule-report list                # List all scheduled reports
+/schedule-report delete reportId:1   # Delete scheduled report with ID 1
 ```
 
 ## How It Works
@@ -260,9 +260,18 @@ The bot can be configured through the `config.ts` file:
   - `path`: Path to SQLite database file
   - `syncInterval`: Minutes between memory and DB syncs (default: 15)
 
+## Interactive Features
+
+The bot now supports interactive components for better user experience:
+
+- **Pagination Buttons**: Activity ranking commands have interactive Previous/Next buttons for easy navigation through pages of results
+- **Delete Buttons**: Most command responses include a Delete button to clean up the chat
+- **Setup Wizard**: The setup process uses interactive components including buttons and modals for a streamlined configuration experience
+
 ## Notes
 
-- The bot now persists data in SQLite, so it will retain tracking data across restarts
+- The bot is built with Discord.js v14.18.0, supporting the latest Discord features
+- Data is persisted in SQLite (using better-sqlite3 v11.8.1), so it will retain tracking data across restarts
 - A user is considered to have "read" a message when they react to it
 - The bot can track up to 100 previous messages due to Discord API limitations
 - New messages are automatically tracked as they are sent
@@ -339,7 +348,7 @@ This is because `better-sqlite3` requires native compilation and Python's `distu
 
 1. **Check your bot token**: Ensure your Discord bot token in the `.env` file is correct.
 2. **Verify permissions**: Make sure the bot has the necessary permissions in your Discord server.
-3. **Check the tracked channel**: Use the `!setup` command to configure the tracked channel if not set.
+3. **Check the tracked channel**: Use the `/setup` command to configure the tracked channel if not set.
 4. **Check logs**: Look for error messages in the console output.
 
 #### Database Errors
