@@ -164,6 +164,7 @@ export class EngagementStatsService extends AbstractBaseService {
                 throw new Error('No user statistics available');
             }
 
+            // Sort all users by activity score
             const sortedUsers = Array.from(userStats.entries())
                 .map(([userId, stats]) => ({
                     userId,
@@ -181,9 +182,15 @@ export class EngagementStatsService extends AbstractBaseService {
             // Limit to requested count
             const limitedUsers = sortedUsers.slice(0, count);
             
-            // Calculate the start and end indices for the requested page
+            // Calculate the page size and total pages
             const pageSize = config.defaults.pageSize;
-            const startIndex = (page - 1) * pageSize;
+            const totalPages = Math.ceil(limitedUsers.length / pageSize);
+            
+            // Ensure the page number is valid
+            const validPage = Math.max(1, Math.min(page, totalPages));
+            
+            // Calculate the start and end indices for the requested page
+            const startIndex = (validPage - 1) * pageSize;
             const endIndex = Math.min(startIndex + pageSize, limitedUsers.length);
             
             // Return the users for the requested page

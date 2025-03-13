@@ -99,8 +99,14 @@ export class ActivityRankingCommand implements Command {
       const action = parts[2]; // prev or next
       const isActive = parts[3] === 'true';
       const count = parseInt(parts[4]);
-      const page = parseInt(parts[5]);
-      const summaryMessageId = parts.length > 6 ? parts[6] : null;
+      let page = parseInt(parts[5]);
+      
+      // Adjust page based on action
+      if (action === 'next') {
+        page = page; // Page is already set to the next page in the button ID
+      } else if (action === 'prev') {
+        page = Math.max(1, page); // Ensure page is at least 1
+      }
       
       // Defer the update first
       await interaction.deferUpdate();
