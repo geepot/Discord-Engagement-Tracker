@@ -114,24 +114,43 @@ export class CommandController {
   private async handleButtonInteraction(interaction: ButtonInteraction): Promise<void> {
     try {
       // Extract the command name from the button ID
-      // Format: cmd_commandName_action
-      const parts = interaction.customId.split('_');
-      if (parts.length < 2) {
-        console.warn(`Invalid button ID format: ${interaction.customId}`);
-        return;
+      // Format can be either:
+      // 1. cmd_commandName_action
+      // 2. cmd_commandName:action:params
+      const customId = interaction.customId;
+      let commandName: string;
+      
+      if (customId.includes(':')) {
+        // Format: cmd_commandName:action:params
+        const mainParts = customId.split('_');
+        if (mainParts.length < 2) {
+          console.warn(`Invalid button ID format: ${customId}`);
+          return;
+        }
+        
+        // Extract command name from the second part (before any colon)
+        commandName = mainParts[1].split(':')[0];
+      } else {
+        // Format: cmd_commandName_action
+        const parts = customId.split('_');
+        if (parts.length < 2) {
+          console.warn(`Invalid button ID format: ${customId}`);
+          return;
+        }
+        
+        commandName = parts[1];
       }
       
-      const commandName = parts[1];
       const command = this.commands.get(commandName);
       
       if (!command || !command.handleButtonInteraction) {
-        console.warn(`No handler found for button: ${interaction.customId}`);
+        console.warn(`No handler found for button: ${customId}`);
         return;
       }
       
       const handled = await command.handleButtonInteraction(this, interaction);
       if (!handled) {
-        console.warn(`Button interaction not handled: ${interaction.customId}`);
+        console.warn(`Button interaction not handled: ${customId}`);
       }
     } catch (error) {
       console.error('Error handling button interaction:', error);
