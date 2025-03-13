@@ -53,6 +53,7 @@ export class SetupController {
    * @param interaction The slash command interaction that initiated setup
    */
   constructor(interaction: ChatInputCommandInteraction) {
+    console.log('Creating new SetupController instance');
     if (!(interaction.channel instanceof TextChannel)) {
       throw new Error('Setup can only be used in text channels');
     }
@@ -77,6 +78,7 @@ export class SetupController {
    * @param page The page component
    */
   public registerPage(pageId: string, page: SetupPage): void {
+    console.log(`Registering setup page: ${pageId}`);
     this.pages.set(pageId, page);
   }
   
@@ -85,6 +87,7 @@ export class SetupController {
    */
   public async start(): Promise<void> {
     try {
+      console.log('Starting setup wizard');
       // Defer the reply to give us time to prepare the setup wizard
       await this.interaction.deferReply();
       
@@ -97,6 +100,7 @@ export class SetupController {
       
       // Store the setup message ID
       this.state.setupMessageId = setupMessage.id;
+      console.log(`Setup message ID: ${setupMessage.id}`);
       
       // Navigate to the welcome page
       await this.navigateToPage('welcome');
@@ -120,6 +124,7 @@ export class SetupController {
    */
   public async navigateToPage(pageId: string): Promise<void> {
     try {
+      console.log(`Navigating to page: ${pageId}`);
       const page = this.pages.get(pageId);
       if (!page) {
         throw new Error(`Page not found: ${pageId}`);
@@ -154,6 +159,7 @@ export class SetupController {
       
       // Update the message
       await this.interaction.editReply(replyOptions);
+      console.log('Setup message updated successfully');
     } catch (error) {
       console.error('Error updating setup message:', error);
       throw new Error('Failed to update setup message');
@@ -164,12 +170,27 @@ export class SetupController {
    * Register interaction handlers for the setup wizard
    */
   private registerInteractionHandlers(): void {
-    // Register a prefix handler for setup buttons
-    const interactionHandler = ServiceRegistry.getInteractionHandlerService();
-    interactionHandler.registerPrefixHandler('setup_', this.handleButtonInteraction.bind(this));
-    
-    // We can't directly register modal handlers with the current interactionHandler
-    // Modal submissions will be handled by the button handlers that show the modals
+    try {
+      console.log('Registering setup interaction handlers');
+      // Register a prefix handler for setup buttons
+      const interactionHandler = ServiceRegistry.getInteractionHandlerService();
+      
+      if (!interactionHandler) {
+        console.error('Failed to get InteractionHandlerService - service not available');
+        return;
+      }
+      
+      console.log('Registering setup button prefix handler');
+      interactionHandler.registerPrefixHandler('setup_', this.handleButtonInteraction.bind(this));
+      console.log('Successfully registered setup button prefix handler');
+      
+      // Register modal prefix handler for setup modals
+      console.log('Registering setup modal prefix handler');
+      interactionHandler.registerModalPrefixHandler('setup_modal_', this.handleModalSubmission.bind(this));
+      console.log('Successfully registered setup modal prefix handler');
+    } catch (error) {
+      console.error('Error registering interaction handlers:', error);
+    }
   }
   
   /**
@@ -178,6 +199,7 @@ export class SetupController {
    */
   private async handleButtonInteraction(interaction: ButtonInteraction): Promise<void> {
     try {
+      console.log(`Received button interaction: ${interaction.customId}`);
       // Verify the user is the one who initiated setup
       if (interaction.user.id !== this.state.initiatorId) {
         await interaction.reply({
@@ -195,12 +217,14 @@ export class SetupController {
       
       // If the page has a custom interaction handler, use it
       if (currentPage.handleInteraction) {
+        console.log(`Delegating button interaction to page handler: ${this.state.currentPage}`);
         await currentPage.handleInteraction(this, interaction);
         return;
       }
       
       // Default handling based on the button ID
       const buttonId = interaction.customId;
+      console.log(`Processing button with ID: ${buttonId}`);
       
       // Handle navigation buttons
       if (buttonId === 'setup_back_to_main') {
@@ -211,6 +235,7 @@ export class SetupController {
         await this.navigateToPage('welcome');
       } else if (buttonId.startsWith('setup_nav_')) {
         const targetPage = buttonId.replace('setup_nav_', '');
+        console.log(`Navigation button clicked, target page: ${targetPage}`);
         await interaction.deferUpdate();
         await this.navigateToPage(targetPage);
       } else {
@@ -230,6 +255,7 @@ export class SetupController {
    */
   private async handleModalSubmission(interaction: ModalSubmitInteraction): Promise<void> {
     try {
+      console.log(`Received modal submission: ${interaction.customId}`);
       // Verify the user is the one who initiated setup
       if (interaction.user.id !== this.state.initiatorId) {
         await interaction.reply({
@@ -247,6 +273,7 @@ export class SetupController {
       
       // If the page has a custom interaction handler, use it
       if (currentPage.handleInteraction) {
+        console.log(`Delegating modal submission to page handler: ${this.state.currentPage}`);
         await currentPage.handleInteraction(this, interaction);
         return;
       }
@@ -268,6 +295,7 @@ export class SetupController {
    */
   private async handleError(message: string): Promise<void> {
     try {
+      console.error(`Setup error: ${message}`);
       // Send an ephemeral error message
       await this.interaction.followUp({
         content: `❌ ${message}. Please try again or restart the setup command.`,
@@ -298,6 +326,7 @@ export class SetupController {
       maxLength?: number;
     }[]
   ): ModalBuilder {
+    console.log(`Creating modal: ${id}`);
     const modal = new ModalBuilder()
       .setCustomId(`setup_modal_${id}`)
       .setTitle(title);
@@ -335,6 +364,7 @@ export class SetupController {
    */
   public updateState(updates: Partial<SetupState>): void {
     this.state = { ...this.state, ...updates };
+    console.log('Setup state updated:', this.state);
   }
   
   /**

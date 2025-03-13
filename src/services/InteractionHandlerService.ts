@@ -21,6 +21,7 @@ export class InteractionHandlerService extends AbstractBaseService {
     private buttonHandlers: Map<string, ButtonInteractionHandler> = new Map();
     private prefixHandlers: Map<string, ButtonInteractionHandler> = new Map();
     private modalHandlers: Map<string, ModalSubmitInteractionHandler> = new Map();
+    private modalPrefixHandlers: Map<string, ModalSubmitInteractionHandler> = new Map();
     private slashCommandHandlers: Map<string, SlashCommandInteractionHandler> = new Map();
     private client: Client | null = null;
 
@@ -89,6 +90,19 @@ export class InteractionHandlerService extends AbstractBaseService {
             this.modalHandlers.delete(modalId);
         } else {
             this.modalHandlers.set(modalId, handler);
+        }
+    }
+    
+    /**
+     * Register a handler for modals with IDs starting with a specific prefix
+     * @param prefix The modal ID prefix to handle
+     * @param handler The handler function, or null to unregister
+     */
+    public registerModalPrefixHandler(prefix: string, handler: ModalSubmitInteractionHandler | null): void {
+        if (handler === null) {
+            this.modalPrefixHandlers.delete(prefix);
+        } else {
+            this.modalPrefixHandlers.set(prefix, handler);
         }
     }
 
@@ -166,10 +180,22 @@ export class InteractionHandlerService extends AbstractBaseService {
     private async handleModalSubmitInteraction(interaction: ModalSubmitInteraction): Promise<void> {
         const customId = interaction.customId;
         
-        // Check for modal handlers
+        console.log(`Handling modal submission with ID: ${customId}`);
+        
+        // Check for exact modal ID handlers
         if (this.modalHandlers.has(customId)) {
+            console.log(`Found exact handler for modal: ${customId}`);
             await this.modalHandlers.get(customId)!(interaction);
             return;
+        }
+        
+        // Check for prefix handlers
+        for (const [prefix, handler] of this.modalPrefixHandlers.entries()) {
+            if (customId.startsWith(prefix)) {
+                console.log(`Found prefix handler for modal: ${customId} (prefix: ${prefix})`);
+                await handler(interaction);
+                return;
+            }
         }
         
         // No handler found

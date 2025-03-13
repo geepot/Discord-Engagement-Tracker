@@ -13,29 +13,35 @@ import TestConfigPage from './pages/TestConfigPage';
 
 // Setup command handler
 async function handleSetupCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-  // Ensure we're in a text channel
-  if (!(interaction.channel instanceof TextChannel)) {
-    await interaction.reply({
-      content: 'This command can only be used in text channels.',
-      ephemeral: true
-    });
-    return;
-  }
-  
-  // Check if user has administrator permissions
-  if (!interaction.memberPermissions?.has('Administrator')) {
-    await interaction.reply({
-      content: 'You need Administrator permissions to use the setup command.',
-      ephemeral: true
-    });
-    return;
-  }
+  console.log(`Setting up setup command for user: ${interaction.user.tag} (${interaction.user.id})`);
   
   try {
+    // Ensure we're in a text channel
+    if (!(interaction.channel instanceof TextChannel)) {
+      console.log('Setup attempted in non-text channel');
+      await interaction.reply({
+        content: 'This command can only be used in text channels.',
+        ephemeral: true
+      });
+      return;
+    }
+    
+    // Check if user has administrator permissions
+    if (!interaction.memberPermissions?.has('Administrator')) {
+      console.log('Setup attempted by user without Administrator permissions');
+      await interaction.reply({
+        content: 'You need Administrator permissions to use the setup command.',
+        ephemeral: true
+      });
+      return;
+    }
+    
+    console.log('Creating SetupController instance');
     // Create a new setup controller
     const controller = new SetupController(interaction);
     
     // Register the pages
+    console.log('Registering setup pages');
     controller.registerPage('welcome', new WelcomePage());
     controller.registerPage('channel', new ChannelSetupPage());
     controller.registerPage('admin_channel', new AdminChannelSetupPage());
@@ -43,17 +49,22 @@ async function handleSetupCommand(interaction: ChatInputCommandInteraction): Pro
     controller.registerPage('test', new TestConfigPage());
     
     // Start the setup wizard
+    console.log('Starting setup wizard flow');
     await controller.start();
   } catch (error) {
     console.error('Error in setup command:', error);
     
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply('An error occurred during setup. Please try again later.');
-    } else {
-      await interaction.reply({
-        content: 'An error occurred during setup. Please try again later.',
-        ephemeral: true
-      });
+    try {
+      if (interaction.replied || interaction.deferred) {
+        await interaction.editReply('An error occurred during setup. Please try again later.');
+      } else {
+        await interaction.reply({
+          content: 'An error occurred during setup. Please try again later.',
+          ephemeral: true
+        });
+      }
+    } catch (replyError) {
+      console.error('Error sending error message:', replyError);
     }
   }
 }
