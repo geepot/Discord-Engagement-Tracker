@@ -1,4 +1,15 @@
-import { ButtonInteraction, Message, TextChannel, TextBasedChannel } from 'discord.js';
+import { 
+    ButtonInteraction, 
+    Message, 
+    TextChannel, 
+    TextBasedChannel, 
+    ModalBuilder, 
+    TextInputBuilder, 
+    TextInputStyle, 
+    ActionRowBuilder, 
+    ModalActionRowComponentBuilder,
+    ModalSubmitInteraction
+} from 'discord.js';
 import interactionHandler from '../../services/interactionHandler';
 import { 
     showSetupWelcome,
@@ -196,12 +207,10 @@ export function registerSetupInteractionHandlers(): void {
  * Handle the setup channel button
  */
 async function handleSetupChannelButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
     const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
     if (!originalMessage) {
-        await interaction.followUp({
+        await interaction.reply({
             content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
@@ -209,22 +218,88 @@ async function handleSetupChannelButton(interaction: ButtonInteraction): Promise
     }
     
     try {
-        if (typeof showChannelSetup !== 'function') {
-            console.error('showChannelSetup is not a function:', showChannelSetup);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
-                ephemeral: true
-            });
-            return;
-        }
+        // Create a modal for channel selection
+        const modal = new ModalBuilder()
+            .setCustomId('setup_channel_modal')
+            .setTitle('Set Tracked Channel');
+            
+        // Add a text input for the channel ID
+        const channelInput = new TextInputBuilder()
+            .setCustomId('channel_id')
+            .setLabel('Enter the channel ID or mention (#channel)')
+            .setPlaceholder('Example: #general or 123456789012345678')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+            
+        // Add the text input to an action row
+        const actionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>()
+            .addComponents(channelInput);
+            
+        // Add the action row to the modal
+        modal.addComponents(actionRow);
         
-        await showChannelSetup({ 
-            message: originalMessage, 
-            setupMessage: interaction.message 
-        });
+        // Show the modal
+        await interaction.showModal(modal);
+        
+        // Wait for the modal submission
+        const filter = (i: ModalSubmitInteraction) => 
+            i.customId === 'setup_channel_modal' && i.user.id === interaction.user.id;
+            
+        try {
+            const modalSubmission = await interaction.awaitModalSubmit({
+                filter,
+                time: 60000 // 1 minute timeout
+            });
+            
+            // Get the channel ID from the modal
+            let channelId = modalSubmission.fields.getTextInputValue('channel_id').trim();
+            
+            // Check if it's a channel mention
+            const channelMatch = channelId.match(/<#(\d+)>/);
+            if (channelMatch) {
+                channelId = channelMatch[1];
+            }
+            
+            // Validate the channel
+            try {
+                const channel = await interaction.guild?.channels.fetch(channelId);
+                if (!channel || !(channel instanceof TextChannel)) {
+                    await modalSubmission.reply({
+                        content: '❌ Invalid channel or not a text channel.',
+                        ephemeral: true
+                    });
+                    return;
+                }
+                
+                // Update settings with new channel ID
+                const { updateSetting } = await import('./utils');
+                updateSetting('TRACKED_CHANNEL_ID', channelId);
+                
+                // Update the setup message with success and return to main menu
+                await modalSubmission.reply({
+                    content: `✅ Successfully set tracked channel to <#${channelId}>. This change will take effect immediately.`,
+                    ephemeral: true
+                });
+                
+                // Return to the main menu
+                await showSetupWelcome({ 
+                    message: originalMessage, 
+                    setupMessage: interaction.message 
+                });
+            } catch (error) {
+                console.error('Error fetching channel:', error);
+                await modalSubmission.reply({
+                    content: '❌ Error fetching channel. Please try again.',
+                    ephemeral: true
+                });
+            }
+        } catch (error) {
+            console.error('Modal submission error or timeout:', error);
+            // No need to send a message, as the modal just closes on timeout
+        }
     } catch (error) {
-        console.error('Error in showChannelSetup:', error);
-        await interaction.followUp({
+        console.error('Error showing channel setup modal:', error);
+        await interaction.reply({
             content: 'An error occurred with the setup wizard. Please try the setup command again.',
             ephemeral: true
         });
@@ -235,12 +310,10 @@ async function handleSetupChannelButton(interaction: ButtonInteraction): Promise
  * Handle the setup admin channel button
  */
 async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
     const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
     if (!originalMessage) {
-        await interaction.followUp({
+        await interaction.reply({
             content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
@@ -248,22 +321,107 @@ async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Pr
     }
     
     try {
-        if (typeof showAdminChannelSetup !== 'function') {
-            console.error('showAdminChannelSetup is not a function:', showAdminChannelSetup);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
-                ephemeral: true
-            });
-            return;
-        }
+        // Create a modal for admin channel selection
+        const modal = new ModalBuilder()
+            .setCustomId('setup_admin_channel_modal')
+            .setTitle('Set Admin Channel');
+            
+        // Add a text input for the channel ID
+        const channelInput = new TextInputBuilder()
+            .setCustomId('admin_channel_id')
+            .setLabel('Enter the channel ID or mention (#channel)')
+            .setPlaceholder('Example: #admin or 123456789012345678 or "none"')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+            
+        // Add the text input to an action row
+        const actionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>()
+            .addComponents(channelInput);
+            
+        // Add the action row to the modal
+        modal.addComponents(actionRow);
         
-        await showAdminChannelSetup({ 
-            message: originalMessage, 
-            setupMessage: interaction.message 
-        });
+        // Show the modal
+        await interaction.showModal(modal);
+        
+        // Wait for the modal submission
+        const filter = (i: ModalSubmitInteraction) => 
+            i.customId === 'setup_admin_channel_modal' && i.user.id === interaction.user.id;
+            
+        try {
+            const modalSubmission = await interaction.awaitModalSubmit({
+                filter,
+                time: 60000 // 1 minute timeout
+            });
+            
+            // Get the channel ID from the modal
+            let channelId = modalSubmission.fields.getTextInputValue('admin_channel_id').trim();
+            
+            // Check if user wants to clear the admin channel
+            if (channelId.toLowerCase() === 'none') {
+                // Clear the admin channel
+                const { updateSetting } = await import('./utils');
+                updateSetting('ADMIN_CHANNEL_ID', '');
+                
+                await modalSubmission.reply({
+                    content: '✅ Admin channel has been cleared. This change will take effect immediately.',
+                    ephemeral: true
+                });
+                
+                // Return to the main menu
+                await showSetupWelcome({ 
+                    message: originalMessage, 
+                    setupMessage: interaction.message 
+                });
+                return;
+            }
+            
+            // Check if it's a channel mention
+            const channelMatch = channelId.match(/<#(\d+)>/);
+            if (channelMatch) {
+                channelId = channelMatch[1];
+            }
+            
+            // Validate the channel
+            try {
+                const channel = await interaction.guild?.channels.fetch(channelId);
+                if (!channel || !(channel instanceof TextChannel)) {
+                    await modalSubmission.reply({
+                        content: '❌ Invalid channel or not a text channel.',
+                        ephemeral: true
+                    });
+                    return;
+                }
+                
+                // Update settings with new channel ID
+                const { updateSetting } = await import('./utils');
+                updateSetting('ADMIN_CHANNEL_ID', channelId);
+                
+                // Update the setup message with success and return to main menu
+                await modalSubmission.reply({
+                    content: `✅ Successfully set admin channel to <#${channelId}>. This change will take effect immediately.`,
+                    ephemeral: true
+                });
+                
+                // Return to the main menu
+                await showSetupWelcome({ 
+                    message: originalMessage, 
+                    setupMessage: interaction.message 
+                });
+            } catch (error) {
+                console.error('Error fetching channel:', error);
+                await modalSubmission.reply({
+                    content: '❌ Error fetching channel. Please try again.',
+                    ephemeral: true
+                });
+            }
+        } catch (error) {
+            console.error('Modal submission error or timeout:', error);
+            // No need to send a message, as the modal just closes on timeout
+        }
     } catch (error) {
-        console.error('Error in showAdminChannelSetup:', error);
-        await interaction.followUp({
+        console.error('Error showing admin channel setup modal:', error);
+        await interaction.reply({
             content: 'An error occurred with the setup wizard. Please try the setup command again.',
             ephemeral: true
         });
@@ -274,12 +432,10 @@ async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Pr
  * Handle the setup prefix button
  */
 async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
     const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
     if (!originalMessage) {
-        await interaction.followUp({
+        await interaction.reply({
             content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
@@ -287,22 +443,74 @@ async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<
     }
     
     try {
-        if (typeof showPrefixSetup !== 'function') {
-            console.error('showPrefixSetup is not a function:', showPrefixSetup);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+        // Create a modal for prefix setup
+        const modal = new ModalBuilder()
+            .setCustomId('setup_prefix_modal')
+            .setTitle('Set Command Prefix');
+            
+        // Add a text input for the prefix
+        const prefixInput = new TextInputBuilder()
+            .setCustomId('command_prefix')
+            .setLabel('Enter the command prefix')
+            .setPlaceholder('Example: ! or / or .')
+            .setStyle(TextInputStyle.Short)
+            .setMaxLength(5)
+            .setRequired(true);
+            
+        // Add the text input to an action row
+        const actionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>()
+            .addComponents(prefixInput);
+            
+        // Add the action row to the modal
+        modal.addComponents(actionRow);
+        
+        // Show the modal
+        await interaction.showModal(modal);
+        
+        // Wait for the modal submission
+        const filter = (i: ModalSubmitInteraction) => 
+            i.customId === 'setup_prefix_modal' && i.user.id === interaction.user.id;
+            
+        try {
+            const modalSubmission = await interaction.awaitModalSubmit({
+                filter,
+                time: 60000 // 1 minute timeout
+            });
+            
+            // Get the prefix from the modal
+            const prefix = modalSubmission.fields.getTextInputValue('command_prefix').trim();
+            
+            // Validate the prefix
+            if (!prefix) {
+                await modalSubmission.reply({
+                    content: '❌ Prefix cannot be empty.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // Update settings with new prefix
+            const { updateSetting } = await import('./utils');
+            updateSetting('COMMAND_PREFIX', prefix);
+            
+            // Update the setup message with success and return to main menu
+            await modalSubmission.reply({
+                content: `✅ Successfully set command prefix to \`${prefix}\`. This change will take effect immediately.`,
                 ephemeral: true
             });
-            return;
+            
+            // Return to the main menu
+            await showSetupWelcome({ 
+                message: originalMessage, 
+                setupMessage: interaction.message 
+            });
+        } catch (error) {
+            console.error('Modal submission error or timeout:', error);
+            // No need to send a message, as the modal just closes on timeout
         }
-        
-        await showPrefixSetup({ 
-            message: originalMessage, 
-            setupMessage: interaction.message 
-        });
     } catch (error) {
-        console.error('Error in showPrefixSetup:', error);
-        await interaction.followUp({
+        console.error('Error showing prefix setup modal:', error);
+        await interaction.reply({
             content: 'An error occurred with the setup wizard. Please try the setup command again.',
             ephemeral: true
         });
@@ -391,12 +599,10 @@ async function handleSetupTestButton(interaction: ButtonInteraction): Promise<vo
  * Handle the setup admin roles button
  */
 async function handleSetupAdminRolesButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
     const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
     if (!originalMessage) {
-        await interaction.followUp({
+        await interaction.reply({
             content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
@@ -404,22 +610,99 @@ async function handleSetupAdminRolesButton(interaction: ButtonInteraction): Prom
     }
     
     try {
-        if (typeof showAdminRoleSetup !== 'function') {
-            console.error('showAdminRoleSetup is not a function:', showAdminRoleSetup);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+        // Import config to get current admin roles
+        const { default: config } = await import('../../config');
+        
+        // Create a modal for admin roles setup
+        const modal = new ModalBuilder()
+            .setCustomId('setup_admin_roles_modal')
+            .setTitle('Set Admin Roles');
+            
+        // Add a text input for the roles
+        const rolesInput = new TextInputBuilder()
+            .setCustomId('admin_roles')
+            .setLabel('Enter role IDs or mentions, separated by spaces')
+            .setPlaceholder('Example: @Admin @Owner or 123456789012345678')
+            .setStyle(TextInputStyle.Paragraph)
+            .setValue(config.permissions.adminRoleIds.map(id => `<@&${id}>`).join(' '))
+            .setRequired(true);
+            
+        // Add the text input to an action row
+        const actionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>()
+            .addComponents(rolesInput);
+            
+        // Add the action row to the modal
+        modal.addComponents(actionRow);
+        
+        // Show the modal
+        await interaction.showModal(modal);
+        
+        // Wait for the modal submission
+        const filter = (i: ModalSubmitInteraction) => 
+            i.customId === 'setup_admin_roles_modal' && i.user.id === interaction.user.id;
+            
+        try {
+            const modalSubmission = await interaction.awaitModalSubmit({
+                filter,
+                time: 60000 // 1 minute timeout
+            });
+            
+            // Get the roles from the modal
+            const rolesText = modalSubmission.fields.getTextInputValue('admin_roles').trim();
+            
+            // Extract role IDs from mentions
+            const roleIds: string[] = [];
+            const roleMentions = rolesText.match(/<@&(\d+)>/g);
+            
+            if (roleMentions) {
+                for (const mention of roleMentions) {
+                    const roleId = mention.match(/<@&(\d+)>/)?.[1];
+                    if (roleId) {
+                        roleIds.push(roleId);
+                    }
+                }
+            }
+            
+            // Also check for raw IDs
+            const rawIds = rolesText.match(/\b\d{17,20}\b/g);
+            if (rawIds) {
+                for (const id of rawIds) {
+                    if (!roleIds.includes(id)) {
+                        roleIds.push(id);
+                    }
+                }
+            }
+            
+            if (roleIds.length === 0) {
+                await modalSubmission.reply({
+                    content: '❌ No valid role mentions or IDs found. Please mention roles using @role-name or provide role IDs.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // Update settings with new role IDs
+            const { updateSetting } = await import('./utils');
+            updateSetting('ADMIN_ROLE_IDS', roleIds.join(','));
+            
+            // Update the setup message with success and return to role setup
+            await modalSubmission.reply({
+                content: `✅ Successfully set admin roles to ${roleIds.map(id => `<@&${id}>`).join(', ')}. This change will take effect immediately.`,
                 ephemeral: true
             });
-            return;
+            
+            // Return to the role setup menu
+            await showRoleSetup({ 
+                message: originalMessage, 
+                setupMessage: interaction.message 
+            });
+        } catch (error) {
+            console.error('Modal submission error or timeout:', error);
+            // No need to send a message, as the modal just closes on timeout
         }
-        
-        await showAdminRoleSetup({ 
-            message: originalMessage, 
-            setupMessage: interaction.message 
-        });
     } catch (error) {
-        console.error('Error in showAdminRoleSetup:', error);
-        await interaction.followUp({
+        console.error('Error showing admin roles setup modal:', error);
+        await interaction.reply({
             content: 'An error occurred with the setup wizard. Please try the setup command again.',
             ephemeral: true
         });
@@ -430,12 +713,10 @@ async function handleSetupAdminRolesButton(interaction: ButtonInteraction): Prom
  * Handle the setup mod roles button
  */
 async function handleSetupModRolesButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
     const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
     if (!originalMessage) {
-        await interaction.followUp({
+        await interaction.reply({
             content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
@@ -443,22 +724,99 @@ async function handleSetupModRolesButton(interaction: ButtonInteraction): Promis
     }
     
     try {
-        if (typeof showModRoleSetup !== 'function') {
-            console.error('showModRoleSetup is not a function:', showModRoleSetup);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+        // Import config to get current mod roles
+        const { default: config } = await import('../../config');
+        
+        // Create a modal for mod roles setup
+        const modal = new ModalBuilder()
+            .setCustomId('setup_mod_roles_modal')
+            .setTitle('Set Moderator Roles');
+            
+        // Add a text input for the roles
+        const rolesInput = new TextInputBuilder()
+            .setCustomId('mod_roles')
+            .setLabel('Enter role IDs or mentions, separated by spaces')
+            .setPlaceholder('Example: @Mod @Helper or 123456789012345678')
+            .setStyle(TextInputStyle.Paragraph)
+            .setValue(config.permissions.modRoleIds.map(id => `<@&${id}>`).join(' '))
+            .setRequired(true);
+            
+        // Add the text input to an action row
+        const actionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>()
+            .addComponents(rolesInput);
+            
+        // Add the action row to the modal
+        modal.addComponents(actionRow);
+        
+        // Show the modal
+        await interaction.showModal(modal);
+        
+        // Wait for the modal submission
+        const filter = (i: ModalSubmitInteraction) => 
+            i.customId === 'setup_mod_roles_modal' && i.user.id === interaction.user.id;
+            
+        try {
+            const modalSubmission = await interaction.awaitModalSubmit({
+                filter,
+                time: 60000 // 1 minute timeout
+            });
+            
+            // Get the roles from the modal
+            const rolesText = modalSubmission.fields.getTextInputValue('mod_roles').trim();
+            
+            // Extract role IDs from mentions
+            const roleIds: string[] = [];
+            const roleMentions = rolesText.match(/<@&(\d+)>/g);
+            
+            if (roleMentions) {
+                for (const mention of roleMentions) {
+                    const roleId = mention.match(/<@&(\d+)>/)?.[1];
+                    if (roleId) {
+                        roleIds.push(roleId);
+                    }
+                }
+            }
+            
+            // Also check for raw IDs
+            const rawIds = rolesText.match(/\b\d{17,20}\b/g);
+            if (rawIds) {
+                for (const id of rawIds) {
+                    if (!roleIds.includes(id)) {
+                        roleIds.push(id);
+                    }
+                }
+            }
+            
+            if (roleIds.length === 0) {
+                await modalSubmission.reply({
+                    content: '❌ No valid role mentions or IDs found. Please mention roles using @role-name or provide role IDs.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // Update settings with new role IDs
+            const { updateSetting } = await import('./utils');
+            updateSetting('MOD_ROLE_IDS', roleIds.join(','));
+            
+            // Update the setup message with success and return to role setup
+            await modalSubmission.reply({
+                content: `✅ Successfully set moderator roles to ${roleIds.map(id => `<@&${id}>`).join(', ')}. This change will take effect immediately.`,
                 ephemeral: true
             });
-            return;
+            
+            // Return to the role setup menu
+            await showRoleSetup({ 
+                message: originalMessage, 
+                setupMessage: interaction.message 
+            });
+        } catch (error) {
+            console.error('Modal submission error or timeout:', error);
+            // No need to send a message, as the modal just closes on timeout
         }
-        
-        await showModRoleSetup({ 
-            message: originalMessage, 
-            setupMessage: interaction.message 
-        });
     } catch (error) {
-        console.error('Error in showModRoleSetup:', error);
-        await interaction.followUp({
+        console.error('Error showing mod roles setup modal:', error);
+        await interaction.reply({
             content: 'An error occurred with the setup wizard. Please try the setup command again.',
             ephemeral: true
         });

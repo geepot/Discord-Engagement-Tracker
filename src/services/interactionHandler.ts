@@ -1,16 +1,19 @@
 import { 
     Interaction, 
     ButtonInteraction, 
+    ModalSubmitInteraction,
     Message, 
     Client,
     Events
 } from 'discord.js';
 
 type ButtonInteractionHandler = (interaction: ButtonInteraction) => Promise<void>;
+type ModalSubmitInteractionHandler = (interaction: ModalSubmitInteraction) => Promise<void>;
 
 class InteractionHandlerService {
     private buttonHandlers: Map<string, ButtonInteractionHandler> = new Map();
     private prefixHandlers: Map<string, ButtonInteractionHandler> = new Map();
+    private modalHandlers: Map<string, ModalSubmitInteractionHandler> = new Map();
     private client: Client | null = null;
 
     /**
@@ -51,46 +54,86 @@ class InteractionHandlerService {
             this.prefixHandlers.set(prefix, handler);
         }
     }
+    
+    /**
+     * Register a handler for a specific modal ID
+     * @param modalId The exact modal ID to handle
+     * @param handler The handler function, or null to unregister
+     */
+    public registerModalHandler(modalId: string, handler: ModalSubmitInteractionHandler | null): void {
+        if (handler === null) {
+            this.modalHandlers.delete(modalId);
+        } else {
+            this.modalHandlers.set(modalId, handler);
+        }
+    }
 
     /**
      * Handle an incoming interaction
      * @param interaction The Discord.js interaction
      */
     private async handleInteraction(interaction: Interaction): Promise<void> {
-        if (!interaction.isButton()) return;
-        
         try {
-            const buttonInteraction = interaction as ButtonInteraction;
-            const customId = buttonInteraction.customId;
-            
-            // Check for exact button ID handlers
-            if (this.buttonHandlers.has(customId)) {
-                await this.buttonHandlers.get(customId)!(buttonInteraction);
-                return;
+            if (interaction.isButton()) {
+                await this.handleButtonInteraction(interaction);
+            } else if (interaction.isModalSubmit()) {
+                await this.handleModalSubmitInteraction(interaction);
             }
-            
-            // Check for prefix handlers
-            for (const [prefix, handler] of this.prefixHandlers.entries()) {
-                if (customId.startsWith(prefix)) {
-                    await handler(buttonInteraction);
-                    return;
-                }
-            }
-            
-            // No handler found
-            console.warn(`No handler found for button interaction with ID: ${customId}`);
-            
         } catch (error) {
             console.error('Error handling interaction:', error);
             
             // If the interaction hasn't been responded to yet, send an error message
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({ 
-                    content: 'An error occurred while processing this interaction.', 
-                    ephemeral: true 
-                });
+            if (interaction.isRepliable()) {
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ 
+                        content: 'An error occurred while processing this interaction.', 
+                        ephemeral: true 
+                    });
+                }
             }
         }
+    }
+    
+    /**
+     * Handle a button interaction
+     * @param interaction The button interaction
+     */
+    private async handleButtonInteraction(interaction: ButtonInteraction): Promise<void> {
+        const customId = interaction.customId;
+        
+        // Check for exact button ID handlers
+        if (this.buttonHandlers.has(customId)) {
+            await this.buttonHandlers.get(customId)!(interaction);
+            return;
+        }
+        
+        // Check for prefix handlers
+        for (const [prefix, handler] of this.prefixHandlers.entries()) {
+            if (customId.startsWith(prefix)) {
+                await handler(interaction);
+                return;
+            }
+        }
+        
+        // No handler found
+        console.warn(`No handler found for button interaction with ID: ${customId}`);
+    }
+    
+    /**
+     * Handle a modal submit interaction
+     * @param interaction The modal submit interaction
+     */
+    private async handleModalSubmitInteraction(interaction: ModalSubmitInteraction): Promise<void> {
+        const customId = interaction.customId;
+        
+        // Check for modal handlers
+        if (this.modalHandlers.has(customId)) {
+            await this.modalHandlers.get(customId)!(interaction);
+            return;
+        }
+        
+        // No handler found
+        console.warn(`No handler found for modal submit interaction with ID: ${customId}`);
     }
 }
 

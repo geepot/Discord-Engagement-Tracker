@@ -8,12 +8,7 @@ import {
 import config from '../../config';
 import { SetupContext, SetupHandler } from './types';
 import { 
-    setShowSetupWelcome,
-    showChannelSetup,
-    showAdminChannelSetup,
-    showPrefixSetup,
-    showRoleSetup,
-    testConfiguration
+    setShowSetupWelcome
 } from './setupHandlers';
 
 /**
