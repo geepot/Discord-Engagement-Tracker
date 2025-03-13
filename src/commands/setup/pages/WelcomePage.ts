@@ -57,11 +57,20 @@ export class WelcomePage implements SetupPage {
           .setStyle(ButtonStyle.Success)
           .setEmoji('✅')
       );
+      
+    const row3 = new ActionRowBuilder<ButtonBuilder>()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('setup_exit')
+          .setLabel('Exit Setup')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🚪')
+      );
     
     return {
       content: undefined,
       embeds: [embed],
-      components: [row1, row2]
+      components: [row1, row2, row3]
     };
   }
 

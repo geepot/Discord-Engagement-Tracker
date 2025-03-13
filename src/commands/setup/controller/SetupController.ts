@@ -246,6 +246,22 @@ export class SetupController {
         console.log(`Navigation button clicked, target page: ${targetPage}`);
         await interaction.deferUpdate();
         await this.navigateToPage(targetPage);
+      } else if (buttonId === 'setup_exit') {
+        console.log('Exiting setup wizard');
+        
+        // Delete the setup message to clean up
+        try {
+          await interaction.message.delete();
+          console.log('Setup message deleted');
+        } catch (error) {
+          console.error('Error deleting setup message:', error);
+        }
+        
+        // Send a confirmation message
+        await interaction.reply({
+          content: '✅ Setup wizard closed. You can run the setup command again at any time to make further changes.',
+          ephemeral: true
+        });
       } else {
         // Unknown button, defer to the page
         await interaction.deferUpdate();
