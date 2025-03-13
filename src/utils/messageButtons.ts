@@ -1,4 +1,34 @@
-import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageCreateOptions } from 'discord.js';
+import { Message, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageCreateOptions, InteractionCollector, ButtonInteraction } from 'discord.js';
+
+/**
+ * Creates a confirmation message with Yes and No buttons
+ * @param content The message content
+ * @param yesCustomId The custom ID for the Yes button
+ * @param noCustomId The custom ID for the No button
+ * @returns MessageCreateOptions with content and Yes/No buttons
+ */
+export function createConfirmationMessage(
+    content: string,
+    yesCustomId: string = 'confirm_yes',
+    noCustomId: string = 'confirm_no'
+): MessageCreateOptions {
+    const row = new ActionRowBuilder<ButtonBuilder>()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId(yesCustomId)
+                .setLabel('Yes')
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId(noCustomId)
+                .setLabel('No')
+                .setStyle(ButtonStyle.Danger)
+        );
+
+    return {
+        content,
+        components: [row]
+    };
+}
 
 /**
  * Creates a delete button with optional linked message IDs
