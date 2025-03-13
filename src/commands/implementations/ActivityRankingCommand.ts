@@ -407,7 +407,7 @@ export class ActivityRankingCommand implements Command {
             newSummaryMessageId = newSummaryMessage.id;
           }
         } else {
-          // Create a new summary message
+          // Create a new summary message only if we don't have one
           const summaryText = await this.generateSummaryText(stats, isActive);
           const newSummaryMessage = await channel.send(summaryText);
           newSummaryMessageId = newSummaryMessage.id;
