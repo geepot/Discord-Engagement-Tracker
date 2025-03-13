@@ -179,7 +179,7 @@ export class EngagementStatsService extends AbstractBaseService {
                     b.activityScore - a.activityScore : 
                     a.activityScore - b.activityScore);
             
-            // Limit to requested count
+            // Apply count limit to the total result set (not per page)
             const limitedUsers = sortedUsers.slice(0, count);
             
             // Calculate the page size and total pages

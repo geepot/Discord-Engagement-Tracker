@@ -91,25 +91,19 @@ export class ActivityRankingCommand implements Command {
   public async handleButtonInteraction(controller: CommandController, interaction: ButtonInteraction): Promise<boolean> {
     const buttonId = interaction.customId;
     
-    // Check if this is an activity ranking button
-    if (buttonId.startsWith('cmd_most-active:') || buttonId.startsWith('cmd_most-inactive:')) {
-      const parts = buttonId.split(':');
-      if (parts.length < 5) return false;
-      
-      // Determine if this is a most-active or most-inactive command
-      const commandName = buttonId.startsWith('cmd_most-active:') ? 'most-active' : 'most-inactive';
-      const isActive = commandName === 'most-active';
-      
-      const action = parts[2]; // prev or next
-      const count = parseInt(parts[4]);
-      let page = parseInt(parts[5]);
-      
-      // Adjust page based on action
-      if (action === 'next') {
-        page = page; // Page is already set to the next page in the button ID
-      } else if (action === 'prev') {
-        page = Math.max(1, page); // Ensure page is at least 1
-      }
+      // Check if this is an activity ranking button
+      if (buttonId.startsWith('cmd_most-active:') || buttonId.startsWith('cmd_most-inactive:')) {
+        const parts = buttonId.split(':');
+        if (parts.length < 5) return false;
+        
+        // Determine if this is a most-active or most-inactive command
+        const commandName = buttonId.startsWith('cmd_most-active:') ? 'most-active' : 'most-inactive';
+        const isActive = commandName === 'most-active';
+        
+        const action = parts[1]; // prev or next
+        const count = parseInt(parts[3]);
+        let page = parseInt(parts[4]);
+        
       
       // Defer the update first
       await interaction.deferUpdate();
@@ -264,8 +258,9 @@ export class ActivityRankingCommand implements Command {
         totalUsers
       );
       
-      // Calculate total pages for pagination
-      const totalPages = Math.ceil(totalUsers / config.defaults.pageSize);
+      // Calculate total pages for pagination based on pageSize
+      const pageSize = config.defaults.pageSize;
+      const totalPages = Math.ceil(totalUsers / pageSize);
       
       // Create pagination buttons
       const paginationButtons = this.createPaginationButtons(isActive, count, page, totalPages);
@@ -275,21 +270,6 @@ export class ActivityRankingCommand implements Command {
         // For slash commands, defer the reply first
         const interaction = source as ChatInputCommandInteraction;
         await interaction.deferReply();
-        
-        // Create pagination buttons
-        const commandName = isActive ? 'most-active' : 'most-inactive';
-        const paginationButtons = [
-          new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
-            .setLabel('Previous')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page <= 1),
-          new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
-            .setLabel('Next')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page >= totalPages)
-        ];
         
         // Create a delete button
         const deleteButton = new ButtonBuilder()
@@ -318,21 +298,6 @@ export class ActivityRankingCommand implements Command {
         // For button interactions, update the existing message
         const buttonInteraction = source as ButtonInteraction;
         
-        // Create pagination buttons
-        const commandName = isActive ? 'most-active' : 'most-inactive';
-        const paginationButtons = [
-          new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
-            .setLabel('Previous')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page <= 1),
-          new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
-            .setLabel('Next')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page >= totalPages)
-        ];
-        
         // Create a delete button
         const deleteButton = new ButtonBuilder()
           .setCustomId('delete_message')
@@ -359,21 +324,6 @@ export class ActivityRankingCommand implements Command {
         // For message commands, send a single message
         // Create a message manager for this command
         const messageManager = new CommandMessageManager(channel);
-        
-        // Create pagination buttons
-        const commandName = isActive ? 'most-active' : 'most-inactive';
-        const paginationButtons = [
-          new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
-            .setLabel('Previous')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page <= 1),
-          new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
-            .setLabel('Next')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page >= totalPages)
-        ];
         
         // Send the combined message with pagination buttons
         const message = await messageManager.sendMessage(formattedRanking);
