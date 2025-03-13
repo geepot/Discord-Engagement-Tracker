@@ -178,18 +178,16 @@ export class EngagementStatsService extends AbstractBaseService {
                     b.activityScore - a.activityScore : 
                     a.activityScore - b.activityScore);
             
-            // Limit to requested count first
+            // Limit to requested count
             const limitedUsers = sortedUsers.slice(0, count);
             
-            // Calculate valid page number based on limited users
-            const totalPages = Math.ceil(limitedUsers.length / config.defaults.pageSize);
-            const validPage = Math.max(1, Math.min(page, totalPages));
+            // Calculate the start and end indices for the requested page
+            const pageSize = config.defaults.pageSize;
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, limitedUsers.length);
             
-            // Apply pagination to limited users
-            return limitedUsers.slice(
-                (validPage - 1) * config.defaults.pageSize, 
-                validPage * config.defaults.pageSize
-            );
+            // Return the users for the requested page
+            return limitedUsers.slice(startIndex, endIndex);
         } catch (error) {
             console.error('Error generating activity ranking:', error);
             throw new Error('Failed to generate activity rankings');
