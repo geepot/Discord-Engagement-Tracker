@@ -96,8 +96,11 @@ export class ActivityRankingCommand implements Command {
       const parts = buttonId.split(':');
       if (parts.length < 5) return false;
       
+      // Determine if this is a most-active or most-inactive command
+      const commandName = buttonId.startsWith('cmd_most-active:') ? 'most-active' : 'most-inactive';
+      const isActive = commandName === 'most-active';
+      
       const action = parts[2]; // prev or next
-      const isActive = parts[3] === 'true';
       const count = parseInt(parts[4]);
       let page = parseInt(parts[5]);
       
