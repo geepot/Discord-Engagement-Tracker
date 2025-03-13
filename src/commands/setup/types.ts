@@ -18,6 +18,7 @@ import {
 export interface SetupContext {
     message: Message;
     setupMessage: Message;
+    initiatorId?: string; // ID of the user who initiated the setup
 }
 
 /**

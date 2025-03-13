@@ -1,5 +1,11 @@
 import { Message, TextChannel } from 'discord.js';
-import { showSetupWelcome } from './setupWelcome';
+import './setupWelcome'; // Import for side effects
+import './roleSetup'; // Import for side effects
+import './channelSetup'; // Import for side effects
+import './adminChannelSetup'; // Import for side effects
+import './prefixSetup'; // Import for side effects
+import './testConfiguration'; // Import for side effects
+import { showSetupWelcome } from './setupHandlers';
 import { registerSetupInteractionHandlers } from './setupInteractions';
 
 // Register setup interaction handlers
@@ -22,6 +28,9 @@ async function handleSetup(message: Message): Promise<void> {
     }
     
     try {
+        // Store the user ID of the person who initiated setup
+        const initiatorId = message.author.id;
+        
         // Send initial message that will be edited by the setup wizard
         const setupMessage = await (message.channel as TextChannel).send({
             content: 'Loading setup wizard...',
@@ -30,7 +39,7 @@ async function handleSetup(message: Message): Promise<void> {
         });
         
         // Show the welcome screen
-        await showSetupWelcome({ message, setupMessage });
+        await showSetupWelcome({ message, setupMessage, initiatorId });
     } catch (error) {
         console.error('Error in setup command:', error);
         await (message.channel as TextChannel).send('An error occurred during setup. Please try again later.');

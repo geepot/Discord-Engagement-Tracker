@@ -33,18 +33,26 @@ async function getOriginalMessage(interaction: ButtonInteraction): Promise<{
 }> {
     const message = interaction.message;
     
-    // Get the original message ID from the embed footer
+    // Get the original message ID and initiator ID from the embed footer
     let originalMessageId = null;
+    let initiatorId = null;
     
     // Check if we have embeds
     if (message.embeds && message.embeds.length > 0) {
         const footerText = message.embeds[0].footer?.text;
         if (footerText) {
             // Extract the setup message ID from the footer text
-            const match = footerText.match(/SetupID:(\d+)/);
-            if (match && match[1]) {
-                originalMessageId = match[1];
+            const setupIdMatch = footerText.match(/SetupID:(\d+)/);
+            if (setupIdMatch && setupIdMatch[1]) {
+                originalMessageId = setupIdMatch[1];
                 console.log(`Found setup message ID in footer: ${originalMessageId}`);
+            }
+            
+            // Extract the initiator ID from the footer text
+            const initiatorIdMatch = footerText.match(/InitiatorID:(\d+)/);
+            if (initiatorIdMatch && initiatorIdMatch[1]) {
+                initiatorId = initiatorIdMatch[1];
+                console.log(`Found initiator ID in footer: ${initiatorId}`);
             }
         }
     }
@@ -166,7 +174,15 @@ async function getOriginalMessage(interaction: ButtonInteraction): Promise<{
         }
         
         // Ensure only the original command user can interact with buttons
-        if (interaction.user.id !== originalMessage.author.id) {
+        // First check if we have the initiator ID from the footer
+        if (initiatorId && interaction.user.id !== initiatorId) {
+            return { 
+                originalMessage: null,
+                errorMessage: 'Only the person who initiated setup can use these buttons.'
+            };
+        }
+        // Fallback to checking the original message author if no initiator ID was found
+        else if (!initiatorId && interaction.user.id !== originalMessage.author.id) {
             return { 
                 originalMessage: null,
                 errorMessage: 'Only the person who initiated setup can use these buttons.'
@@ -207,6 +223,20 @@ export function registerSetupInteractionHandlers(): void {
  * Handle the setup channel button
  */
 async function handleSetupChannelButton(interaction: ButtonInteraction): Promise<void> {
+    const message = interaction.message;
+    let initiatorId = null;
+    
+    // Extract initiator ID from the footer if available
+    if (message.embeds && message.embeds.length > 0) {
+        const footerText = message.embeds[0].footer?.text;
+        if (footerText) {
+            const initiatorIdMatch = footerText.match(/InitiatorID:(\d+)/);
+            if (initiatorIdMatch && initiatorIdMatch[1]) {
+                initiatorId = initiatorIdMatch[1];
+            }
+        }
+    }
+    
     const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
     if (!originalMessage) {
@@ -284,7 +314,8 @@ async function handleSetupChannelButton(interaction: ButtonInteraction): Promise
                 // Return to the main menu
                 await showSetupWelcome({ 
                     message: originalMessage, 
-                    setupMessage: interaction.message 
+                    setupMessage: interaction.message,
+                    initiatorId: initiatorId || undefined
                 });
             } catch (error) {
                 console.error('Error fetching channel:', error);

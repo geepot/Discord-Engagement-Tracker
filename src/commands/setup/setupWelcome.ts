@@ -14,7 +14,7 @@ import {
 /**
  * Shows the welcome screen and main menu for the setup wizard
  */
-export const showSetupWelcome: SetupHandler = async ({ message, setupMessage }: SetupContext): Promise<void> => {
+export const showSetupWelcome: SetupHandler = async ({ message, setupMessage, initiatorId }: SetupContext): Promise<void> => {
     const embed = new EmbedBuilder()
         .setTitle('📊 Discord Engagement Tracker Setup')
         .setDescription('Welcome to the setup wizard! This will help you configure the bot for your server.')
@@ -68,9 +68,9 @@ export const showSetupWelcome: SetupHandler = async ({ message, setupMessage }: 
         // Store the setup message ID in the footer for persistence
         // We'll use this in the interaction handlers to find the setup message
         try {
-            // Add a hidden field to the embed to store the setup message ID
+            // Add a hidden field to the embed to store the setup message ID and initiator ID
             embed.setFooter({ 
-                text: `Discord Engagement Tracker • Setup Wizard • SetupID:${setupMessage.id}` 
+                text: `Discord Engagement Tracker • Setup Wizard • SetupID:${setupMessage.id} • InitiatorID:${initiatorId}` 
             });
             
             // Update the message with the modified embed
