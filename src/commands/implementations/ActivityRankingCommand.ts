@@ -92,7 +92,7 @@ export class ActivityRankingCommand implements Command {
     const buttonId = interaction.customId;
     
     // Check if this is an activity ranking button
-    if (buttonId.startsWith('cmd_activity_ranking:')) {
+    if (buttonId.startsWith('cmd_most-active:') || buttonId.startsWith('cmd_most-inactive:')) {
       const parts = buttonId.split(':');
       if (parts.length < 5) return false;
       
@@ -263,14 +263,15 @@ export class ActivityRankingCommand implements Command {
         const summaryMessage = await channel.send(summaryText);
         
         // Create new pagination buttons with the summary message ID included
+        const commandName = isActive ? 'most-active' : 'most-inactive';
         const updatedPaginationButtons = [
           new ButtonBuilder()
-            .setCustomId(`cmd_activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessage.id}`)
+            .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessage.id}`)
             .setLabel('Previous')
             .setStyle(ButtonStyle.Primary)
             .setDisabled(page <= 1),
           new ButtonBuilder()
-            .setCustomId(`cmd_activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessage.id}`)
+            .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessage.id}`)
             .setLabel('Next')
             .setStyle(ButtonStyle.Primary)
             .setDisabled(page >= totalPages)
@@ -309,14 +310,15 @@ export class ActivityRankingCommand implements Command {
         
         if (summaryMessageId) {
           // Create new pagination buttons with the summary message ID included
+          const commandName = isActive ? 'most-active' : 'most-inactive';
           const updatedPaginationButtons = [
             new ButtonBuilder()
-              .setCustomId(`cmd_activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessageId}`)
+              .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessageId}`)
               .setLabel('Previous')
               .setStyle(ButtonStyle.Primary)
               .setDisabled(page <= 1),
             new ButtonBuilder()
-              .setCustomId(`cmd_activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessageId}`)
+              .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessageId}`)
               .setLabel('Next')
               .setStyle(ButtonStyle.Primary)
               .setDisabled(page >= totalPages)
@@ -377,14 +379,15 @@ export class ActivityRankingCommand implements Command {
         }
         
         // Create new pagination buttons with the summary message ID included
+        const commandName = isActive ? 'most-active' : 'most-inactive';
         const updatedPaginationButtons = [
           new ButtonBuilder()
-            .setCustomId(`cmd_activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessage.id}`)
+            .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessage.id}`)
             .setLabel('Previous')
             .setStyle(ButtonStyle.Primary)
             .setDisabled(page <= 1),
           new ButtonBuilder()
-            .setCustomId(`cmd_activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessage.id}`)
+            .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessage.id}`)
             .setLabel('Next')
             .setStyle(ButtonStyle.Primary)
             .setDisabled(page >= totalPages)
@@ -492,14 +495,15 @@ export class ActivityRankingCommand implements Command {
    * @returns Array of pagination buttons
    */
   private createPaginationButtons(isActive: boolean, count: number, page: number, totalPages: number): ButtonBuilder[] {
+    const commandName = isActive ? 'most-active' : 'most-inactive';
     return [
       new ButtonBuilder()
-        .setCustomId(`cmd_activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
+        .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
         .setLabel('Previous')
         .setStyle(ButtonStyle.Primary)
         .setDisabled(page <= 1),
       new ButtonBuilder()
-        .setCustomId(`cmd_activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
+        .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
         .setLabel('Next')
         .setStyle(ButtonStyle.Primary)
         .setDisabled(page >= totalPages)
