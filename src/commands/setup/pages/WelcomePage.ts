@@ -69,10 +69,12 @@ export class WelcomePage implements SetupPage {
    * Handle interactions for the welcome page
    * @param controller The setup controller
    * @param interaction The interaction
+   * @returns false - indicating the welcome page doesn't handle any interactions
    */
-  public async handleInteraction(controller: any, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<void> {
+  public async handleInteraction(controller: any, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<boolean> {
     // The welcome page doesn't have any special interactions
     // All navigation is handled by the controller
+    return false;
   }
 }
 

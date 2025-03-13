@@ -66,8 +66,9 @@ export class ChannelSetupPage implements SetupPage {
    * Handle interactions for the channel setup page
    * @param controller The setup controller
    * @param interaction The interaction
+   * @returns true if the interaction was handled, false otherwise
    */
-  public async handleInteraction(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<void> {
+  public async handleInteraction(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<boolean> {
     try {
       // Handle button interactions
       if (interaction.isButton()) {
@@ -95,14 +96,18 @@ export class ChannelSetupPage implements SetupPage {
             console.log('Showing channel selection modal');
             await interaction.showModal(modal);
             console.log('Modal shown successfully');
+            return true;
           } catch (error) {
             console.error('Error showing channel selection modal:', error);
             await interaction.reply({
               content: '❌ Error showing channel selection form. Please try again.',
               ephemeral: true
             });
+            return true;
           }
         }
+        // If we get here, we didn't handle the button
+        return false;
       }
       // Handle modal submissions
       else if (interaction.isModalSubmit()) {
@@ -133,7 +138,7 @@ export class ChannelSetupPage implements SetupPage {
                 content: '❌ Channel not found. Please check the ID and try again.',
                 ephemeral: true
               });
-              return;
+              return true;
             }
             
             if (!channel.isTextBased()) {
@@ -142,7 +147,7 @@ export class ChannelSetupPage implements SetupPage {
                 content: '❌ The selected channel is not a text channel.',
                 ephemeral: true
               });
-              return;
+              return true;
             }
             
             console.log(`Channel validated successfully: ${channelId}`);
@@ -161,6 +166,7 @@ export class ChannelSetupPage implements SetupPage {
             // Return to the main menu
             console.log('Navigating back to welcome page');
             await controller.navigateToPage('welcome');
+            return true;
           } catch (error) {
             console.error('Error processing channel modal submission:', error);
             try {
@@ -171,12 +177,15 @@ export class ChannelSetupPage implements SetupPage {
             } catch (replyError) {
               console.error('Error sending error reply:', replyError);
             }
+            return true;
           }
         } else {
           console.warn(`Unknown modal ID received: ${modalId}, expected setup_modal_channel_set`);
+          return false;
         }
       } else {
         console.warn(`Unknown interaction type received in ChannelSetupPage`);
+        return false;
       }
     } catch (error) {
       console.error('Uncaught error in ChannelSetupPage.handleInteraction:', error);
@@ -190,6 +199,7 @@ export class ChannelSetupPage implements SetupPage {
       } catch (replyError) {
         console.error('Error sending error reply:', replyError);
       }
+      return true; // We handled the error, so return true
     }
   }
 }

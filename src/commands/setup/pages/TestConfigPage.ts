@@ -58,10 +58,12 @@ export class TestConfigPage implements SetupPage {
    * Handle interactions for the test configuration page
    * @param controller The setup controller
    * @param interaction The interaction
+   * @returns false - indicating the test page doesn't handle any interactions
    */
-  public async handleInteraction(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<void> {
+  public async handleInteraction(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<boolean> {
     // The test configuration page doesn't have any special interactions
     // All navigation is handled by the controller
+    return false;
   }
 
   /**

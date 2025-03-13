@@ -24,7 +24,7 @@ import ServiceRegistry from '../../../services/ServiceRegistry';
  */
 export interface SetupPage {
   render(controller: SetupController): Promise<MessageCreateOptions>;
-  handleInteraction?(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<void>;
+  handleInteraction?(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<boolean | void>;
 }
 
 /**
@@ -216,10 +216,18 @@ export class SetupController {
       }
       
       // If the page has a custom interaction handler, use it
+      // But continue processing if the page handler doesn't explicitly handle the interaction
       if (currentPage.handleInteraction) {
         console.log(`Delegating button interaction to page handler: ${this.state.currentPage}`);
-        await currentPage.handleInteraction(this, interaction);
-        return;
+        
+        // We only want to return early if the page actually did something with the interaction
+        // For pages that have an empty handler (like WelcomePage), we want to continue processing
+        const wasHandled = await currentPage.handleInteraction(this, interaction);
+        if (wasHandled === true) {
+          console.log('Interaction was handled by page handler, stopping further processing');
+          return;
+        }
+        console.log('Page handler did not handle interaction, continuing with default handling');
       }
       
       // Default handling based on the button ID
@@ -274,8 +282,12 @@ export class SetupController {
       // If the page has a custom interaction handler, use it
       if (currentPage.handleInteraction) {
         console.log(`Delegating modal submission to page handler: ${this.state.currentPage}`);
-        await currentPage.handleInteraction(this, interaction);
-        return;
+        const wasHandled = await currentPage.handleInteraction(this, interaction);
+        if (wasHandled === true) {
+          console.log('Modal submission was handled by page handler, stopping further processing');
+          return;
+        }
+        console.log('Page handler did not handle modal submission, continuing with default handling');
       }
       
       // Default handling - just acknowledge the submission

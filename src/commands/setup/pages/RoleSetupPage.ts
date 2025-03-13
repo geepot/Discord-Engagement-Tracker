@@ -79,8 +79,9 @@ export class RoleSetupPage implements SetupPage {
    * Handle interactions for the role setup page
    * @param controller The setup controller
    * @param interaction The interaction
+   * @returns true if the interaction was handled, false otherwise
    */
-  public async handleInteraction(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<void> {
+  public async handleInteraction(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<boolean> {
     // Handle button interactions
     if (interaction.isButton()) {
       const buttonId = interaction.customId;
@@ -103,6 +104,7 @@ export class RoleSetupPage implements SetupPage {
         );
         
         await interaction.showModal(modal);
+        return true;
       }
       else if (buttonId === 'setup_mod_roles_set') {
         // Show the modal for moderator roles selection
@@ -122,7 +124,11 @@ export class RoleSetupPage implements SetupPage {
         );
         
         await interaction.showModal(modal);
+        return true;
       }
+      
+      // If we didn't handle the button, return false
+      return false;
     }
     // Handle modal submissions
     else if (interaction.isModalSubmit()) {
@@ -140,7 +146,7 @@ export class RoleSetupPage implements SetupPage {
             content: '❌ No valid role mentions or IDs found. Please mention roles using @role-name or provide role IDs.',
             ephemeral: true
           });
-          return;
+          return true;
         }
         
         // Update settings with new role IDs
@@ -154,6 +160,7 @@ export class RoleSetupPage implements SetupPage {
         
         // Refresh the current page to show the updated roles
         await controller.navigateToPage('roles');
+        return true;
       }
       else if (modalId === 'setup_modal_mod_roles_set') {
         // Get the roles from the modal
@@ -167,7 +174,7 @@ export class RoleSetupPage implements SetupPage {
             content: '❌ No valid role mentions or IDs found. Please mention roles using @role-name or provide role IDs.',
             ephemeral: true
           });
-          return;
+          return true;
         }
         
         // Update settings with new role IDs
@@ -181,8 +188,15 @@ export class RoleSetupPage implements SetupPage {
         
         // Refresh the current page to show the updated roles
         await controller.navigateToPage('roles');
+        return true;
       }
+      
+      // If we didn't handle the modal, return false
+      return false;
     }
+    
+    // If we reached here, we didn't handle the interaction
+    return false;
   }
 
   /**

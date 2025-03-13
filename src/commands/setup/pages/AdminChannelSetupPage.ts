@@ -67,8 +67,9 @@ export class AdminChannelSetupPage implements SetupPage {
    * Handle interactions for the admin channel setup page
    * @param controller The setup controller
    * @param interaction The interaction
+   * @returns true if the interaction was handled, false otherwise
    */
-  public async handleInteraction(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<void> {
+  public async handleInteraction(controller: SetupController, interaction: ButtonInteraction | ModalSubmitInteraction): Promise<boolean> {
     // Handle button interactions
     if (interaction.isButton()) {
       const buttonId = interaction.customId;
@@ -90,7 +91,9 @@ export class AdminChannelSetupPage implements SetupPage {
         );
         
         await interaction.showModal(modal);
+        return true;
       }
+      return false;
     }
     // Handle modal submissions
     else if (interaction.isModalSubmit()) {
@@ -112,7 +115,7 @@ export class AdminChannelSetupPage implements SetupPage {
           
           // Return to the main menu
           await controller.navigateToPage('welcome');
-          return;
+          return true;
         }
         
         // Check if it's a channel mention
@@ -129,7 +132,7 @@ export class AdminChannelSetupPage implements SetupPage {
               content: '❌ Invalid channel or not a text channel.',
               ephemeral: true
             });
-            return;
+            return true;
           }
           
           // Update settings with new channel ID
@@ -143,15 +146,21 @@ export class AdminChannelSetupPage implements SetupPage {
           
           // Return to the main menu
           await controller.navigateToPage('welcome');
+          return true;
         } catch (error) {
           console.error('Error fetching channel:', error);
           await interaction.reply({
             content: '❌ Error fetching channel. Please try again.',
             ephemeral: true
           });
+          return true;
         }
       }
+      return false;
     }
+    
+    // If we reached here, we didn't handle the interaction
+    return false;
   }
 }
 
