@@ -1,9 +1,10 @@
-import { Message, TextChannel, InteractionCollector, ButtonInteraction } from 'discord.js';
+import { Message, TextChannel, ButtonInteraction } from 'discord.js';
 import messageTracker from '../services/messageTracker';
 import engagementStats from '../services/engagementStats';
-import { formatMessageSummary, sendLongMessage } from '../utils/formatters';
+import { formatMessageSummary } from '../utils/formatters';
 import { createMessageWithDeleteButton, createConfirmationMessage } from '../utils/messageButtons';
 import { CommandMessageManager } from '../utils/messageManager';
+import interactionHandler from '../services/interactionHandler';
 
 /**
  * Process all tracked messages and generate summaries
@@ -114,43 +115,61 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
                 )
             );
             
-            // Create a collector for button interactions
-            const collector = channel.createMessageComponentCollector({
-                filter: (interaction) => 
-                    interaction.message.id === confirmationMessage.id &&
-                    (interaction.customId === 'confirm_check_all_yes' || interaction.customId === 'confirm_check_all_no'),
-                time: 60000, // 1 minute timeout
-                max: 1 // Only collect one interaction
-            });
-            
-            // Handle button interactions
-            collector.on('collect', async (interaction: ButtonInteraction) => {
+            // Register one-time handlers for the confirmation buttons
+            const confirmYesHandler = async (interaction: ButtonInteraction) => {
                 // Disable the buttons
                 await interaction.update({
                     components: []
                 });
                 
-                if (interaction.customId === 'confirm_check_all_yes') {
-                    // User confirmed, process all messages
-                    await processAllTrackedMessages(channel, messageManager);
-                } else {
-                    // User cancelled
-                    await channel.send(
-                        createMessageWithDeleteButton('Command cancelled.')
-                    );
-                }
-            });
+                // User confirmed, process all messages
+                await processAllTrackedMessages(channel, messageManager);
+                
+                // Remove the handler after use
+                interactionHandler.registerButtonHandler('confirm_check_all_yes', null);
+                interactionHandler.registerButtonHandler('confirm_check_all_no', null);
+            };
             
-            // Handle collector end (timeout)
-            collector.on('end', async (collected) => {
-                if (collected.size === 0) {
-                    // No interaction received, timeout
-                    await confirmationMessage.edit({
-                        content: '⚠️ Confirmation timed out. Command cancelled.',
-                        components: []
-                    });
+            const confirmNoHandler = async (interaction: ButtonInteraction) => {
+                // Disable the buttons
+                await interaction.update({
+                    components: []
+                });
+                
+                // User cancelled
+                await channel.send(
+                    createMessageWithDeleteButton('Command cancelled.')
+                );
+                
+                // Remove the handler after use
+                interactionHandler.registerButtonHandler('confirm_check_all_yes', null);
+                interactionHandler.registerButtonHandler('confirm_check_all_no', null);
+            };
+            
+            // Register the handlers
+            interactionHandler.registerButtonHandler('confirm_check_all_yes', confirmYesHandler);
+            interactionHandler.registerButtonHandler('confirm_check_all_no', confirmNoHandler);
+            
+            // Set a timeout to clean up the handlers and update the message if no interaction
+            setTimeout(async () => {
+                // Check if the message still exists and has components (hasn't been interacted with)
+                try {
+                    const fetchedMessage = await channel.messages.fetch(confirmationMessage.id);
+                    if (fetchedMessage.components.length > 0) {
+                        // No interaction received, timeout
+                        await fetchedMessage.edit({
+                            content: '⚠️ Confirmation timed out. Command cancelled.',
+                            components: []
+                        });
+                        
+                        // Remove the handlers
+                        interactionHandler.registerButtonHandler('confirm_check_all_yes', null);
+                        interactionHandler.registerButtonHandler('confirm_check_all_no', null);
+                    }
+                } catch (error) {
+                    console.error('Error checking confirmation message:', error);
                 }
-            });
+            }, 60000); // 1 minute timeout
         }
     } catch (error) {
         console.error('Error in handleCheckEngagement:', error);

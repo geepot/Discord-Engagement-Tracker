@@ -3,9 +3,7 @@ import {
     EmbedBuilder, 
     ActionRowBuilder, 
     ButtonBuilder, 
-    ButtonStyle, 
-    ComponentType, 
-    MessageComponentInteraction,
+    ButtonStyle,
     CollectorFilter, 
     ReadonlyCollection 
 } from 'discord.js';
@@ -54,49 +52,14 @@ export const showRoleSetup: SetupHandler = async ({ message, setupMessage }: Set
         components: [row]
     });
     
-    // Create collector for button interactions
-    const collector = setupMessage.createMessageComponentCollector({
-        componentType: ComponentType.Button,
-        time: 60000 // 1 minute
-    });
-    
-    collector.on('collect', async (interaction: MessageComponentInteraction) => {
-        // Ensure only the original command user can interact with buttons
-        if (interaction.user.id !== message.author.id) {
-            await interaction.reply({
-                content: 'Only the person who initiated setup can use these buttons.',
-                ephemeral: true
-            });
-            return;
-        }
-        
-        await interaction.deferUpdate();
-        
-        const context: SetupContext = { message, setupMessage };
-        
-        switch (interaction.customId) {
-            case 'setup_admin_roles':
-                await showAdminRoleSetup(context);
-                break;
-                
-            case 'setup_mod_roles':
-                await showModRoleSetup(context);
-                break;
-                
-            case 'setup_back':
-                await showSetupWelcome(context);
-                break;
-        }
-        
-        collector.stop();
-    });
-    
-    collector.on('end', async (collected, reason) => {
-        if (reason === 'time' && collected.size === 0) {
-            await (message.channel as TextChannel).send('⏱️ Role setup timed out.');
-            await showSetupWelcome({ message, setupMessage });
-        }
-    });
+    // Store the original message ID in the setup message
+    // We'll use this in the interaction handlers to find the original message
+    setupMessage.reference = {
+        messageId: message.id,
+        channelId: message.channel.id,
+        guildId: message.guild?.id,
+        type: 0 // Required by TypeScript, but not used by Discord.js
+    };
 };
 
 /**

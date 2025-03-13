@@ -29,19 +29,27 @@ class InteractionHandlerService {
     /**
      * Register a handler for a specific button ID
      * @param buttonId The exact button ID to handle
-     * @param handler The handler function
+     * @param handler The handler function, or null to unregister
      */
-    public registerButtonHandler(buttonId: string, handler: ButtonInteractionHandler): void {
-        this.buttonHandlers.set(buttonId, handler);
+    public registerButtonHandler(buttonId: string, handler: ButtonInteractionHandler | null): void {
+        if (handler === null) {
+            this.buttonHandlers.delete(buttonId);
+        } else {
+            this.buttonHandlers.set(buttonId, handler);
+        }
     }
 
     /**
      * Register a handler for buttons with IDs starting with a specific prefix
      * @param prefix The button ID prefix to handle
-     * @param handler The handler function
+     * @param handler The handler function, or null to unregister
      */
-    public registerPrefixHandler(prefix: string, handler: ButtonInteractionHandler): void {
-        this.prefixHandlers.set(prefix, handler);
+    public registerPrefixHandler(prefix: string, handler: ButtonInteractionHandler | null): void {
+        if (handler === null) {
+            this.prefixHandlers.delete(prefix);
+        } else {
+            this.prefixHandlers.set(prefix, handler);
+        }
     }
 
     /**
