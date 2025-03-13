@@ -1,40 +1,34 @@
-import { Message, TextChannel } from 'discord.js';
-import { showSetupWelcome } from './setupWelcome';
-import { registerSetupInteractionHandlers } from './setupInteractions';
-
-// Register setup interaction handlers
-registerSetupInteractionHandlers();
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const discord_js_1 = require("discord.js");
+const setupWelcome_1 = require("./setupWelcome");
 /**
  * Setup command to help users configure the bot with a graphical interface
  */
-async function handleSetup(message: Message): Promise<void> {
+async function handleSetup(message) {
     // Ensure we're in a text channel
-    if (!(message.channel instanceof TextChannel)) {
+    if (!(message.channel instanceof discord_js_1.TextChannel)) {
         await message.reply('This command can only be used in text channels.');
         return;
     }
-    
     // Check if user has administrator permissions
     if (!message.member?.permissions.has('Administrator')) {
         await message.reply('You need Administrator permissions to use the setup command.');
         return;
     }
-    
     try {
         // Send initial message that will be edited by the setup wizard
-        const setupMessage = await (message.channel as TextChannel).send({
+        const setupMessage = await message.channel.send({
             content: 'Loading setup wizard...',
             embeds: [],
             components: []
         });
-        
         // Show the welcome screen
-        await showSetupWelcome({ message, setupMessage });
-    } catch (error) {
+        await (0, setupWelcome_1.showSetupWelcome)({ message, setupMessage });
+    }
+    catch (error) {
         console.error('Error in setup command:', error);
-        await (message.channel as TextChannel).send('An error occurred during setup. Please try again later.');
+        await message.channel.send('An error occurred during setup. Please try again later.');
     }
 }
-
-export default handleSetup;
+exports.default = handleSetup;

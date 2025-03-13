@@ -1,8 +1,10 @@
-import { Client, Events, Message, GatewayIntentBits, TextChannel, GuildTextBasedChannel, Interaction, ButtonInteraction } from 'discord.js';
+import { Client, Events, Message, GatewayIntentBits, TextChannel } from 'discord.js';
 import config, { updateSettingsFromDatabase } from './config';
 import messageTracker from './services/messageTracker';
 import database from './services/database';
 import reportScheduler from './services/reportScheduler';
+import interactionHandler from './services/interactionHandler';
+import { registerGeneralInteractionHandlers } from './utils/interactionHandlers';
 import handleCheckEngagement from './commands/checkEngagement';
 import { handleMostActive, handleMostInactive } from './commands/activityRanking';
 import handleSetPrefix from './commands/setPrefix';
@@ -38,6 +40,12 @@ class EngagementBot {
             
             // Initialize report scheduler
             reportScheduler.initialize(this.client);
+            
+            // Initialize the interaction handler
+            interactionHandler.initialize(this.client);
+            
+            // Register general interaction handlers
+            registerGeneralInteractionHandlers();
         });
 
         // Message creation
@@ -77,87 +85,6 @@ class EngagementBot {
         this.client.on(Events.MessageReactionRemove, async (reaction, user) => {
             if (config.trackedChannelId && reaction.message.channel.id === config.trackedChannelId) {
                 messageTracker.removeReaction(reaction.message.id, reaction.emoji.name, user.id);
-            }
-        });
-        
-        // Button interaction handler
-        this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-            if (!interaction.isButton()) return;
-            
-            try {
-                const buttonInteraction = interaction as ButtonInteraction;
-                const customId = buttonInteraction.customId;
-                
-                // Handle delete message button
-                if (customId.startsWith('delete_message')) {
-                    try {
-                        const message = buttonInteraction.message;
-                        const parts = customId.split(':');
-                        const messageIds = parts.slice(1); // Skip the 'delete_message' part
-                        
-                        // Delete the interaction message first
-                        if (message.deletable) {
-                            await message.delete().catch(error => {
-                                console.error('Error deleting message:', error);
-                            });
-                        }
-                        
-                        // Delete any linked messages
-                        if (messageIds.length > 0) {
-                            for (const id of messageIds) {
-                                try {
-                                    const channel = message.channel;
-                                    const relatedMessage = await channel.messages.fetch(id);
-                                    if (relatedMessage && relatedMessage.deletable) {
-                                        await relatedMessage.delete();
-                                    }
-                                } catch (error) {
-                                    console.error(`Error deleting linked message ${id}:`, error);
-                                    // Continue with other messages
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error handling delete button:', error);
-                        if (!buttonInteraction.replied) {
-                            await buttonInteraction.reply({
-                                content: 'Failed to delete message(s).',
-                                ephemeral: true
-                            });
-                        }
-                    }
-                    return;
-                }
-                
-                // Handle activity ranking pagination buttons
-                if (customId.startsWith('activity_ranking:')) {
-                    const [_, action, isActiveStr, countStr, pageStr] = customId.split(':');
-                    const isActive = isActiveStr === 'true';
-                    const count = parseInt(countStr);
-                    const page = parseInt(pageStr);
-                    
-                    if (action === 'prev' || action === 'next') {
-                        // Defer the reply to avoid interaction timeout
-                        await buttonInteraction.deferUpdate();
-                        
-                        // Handle the pagination based on whether it's most active or most inactive
-                        if (isActive) {
-                            await handleMostActive(buttonInteraction, count, page);
-                        } else {
-                            await handleMostInactive(buttonInteraction, count, page);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error handling button interaction:', error);
-                
-                // If the interaction hasn't been responded to yet, send an error message
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({ 
-                        content: 'An error occurred while processing this interaction.', 
-                        ephemeral: true 
-                    });
-                }
             }
         });
     }
