@@ -208,10 +208,27 @@ async function handleSetupChannelButton(interaction: ButtonInteraction): Promise
         return;
     }
     
-    await showChannelSetup({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof showChannelSetup !== 'function') {
+            console.error('showChannelSetup is not a function:', showChannelSetup);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await showChannelSetup({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in showChannelSetup:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
 
 /**
@@ -230,10 +247,27 @@ async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Pr
         return;
     }
     
-    await showAdminChannelSetup({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof showAdminChannelSetup !== 'function') {
+            console.error('showAdminChannelSetup is not a function:', showAdminChannelSetup);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await showAdminChannelSetup({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in showAdminChannelSetup:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
 
 /**
@@ -252,10 +286,27 @@ async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<
         return;
     }
     
-    await showPrefixSetup({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof showPrefixSetup !== 'function') {
+            console.error('showPrefixSetup is not a function:', showPrefixSetup);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await showPrefixSetup({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in showPrefixSetup:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
 
 /**
@@ -274,10 +325,27 @@ async function handleSetupRolesButton(interaction: ButtonInteraction): Promise<v
         return;
     }
     
-    await showRoleSetup({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof showRoleSetup !== 'function') {
+            console.error('showRoleSetup is not a function:', showRoleSetup);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await showRoleSetup({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in showRoleSetup:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
 
 /**
@@ -296,10 +364,27 @@ async function handleSetupTestButton(interaction: ButtonInteraction): Promise<vo
         return;
     }
     
-    await testConfiguration({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof testConfiguration !== 'function') {
+            console.error('testConfiguration is not a function:', testConfiguration);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await testConfiguration({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in testConfiguration:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
 
 /**
@@ -318,10 +403,27 @@ async function handleSetupAdminRolesButton(interaction: ButtonInteraction): Prom
         return;
     }
     
-    await showAdminRoleSetup({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof showAdminRoleSetup !== 'function') {
+            console.error('showAdminRoleSetup is not a function:', showAdminRoleSetup);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await showAdminRoleSetup({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in showAdminRoleSetup:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
 
 /**
@@ -340,10 +442,27 @@ async function handleSetupModRolesButton(interaction: ButtonInteraction): Promis
         return;
     }
     
-    await showModRoleSetup({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof showModRoleSetup !== 'function') {
+            console.error('showModRoleSetup is not a function:', showModRoleSetup);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await showModRoleSetup({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in showModRoleSetup:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
 
 /**
@@ -362,10 +481,27 @@ async function handleSetupBackButton(interaction: ButtonInteraction): Promise<vo
         return;
     }
     
-    await showSetupWelcome({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof showSetupWelcome !== 'function') {
+            console.error('showSetupWelcome is not a function:', showSetupWelcome);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await showSetupWelcome({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in showSetupWelcome:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
 
 /**
@@ -384,8 +520,25 @@ async function handleSetupBackToMainButton(interaction: ButtonInteraction): Prom
         return;
     }
     
-    await showSetupWelcome({ 
-        message: originalMessage, 
-        setupMessage: interaction.message 
-    });
+    try {
+        if (typeof showSetupWelcome !== 'function') {
+            console.error('showSetupWelcome is not a function:', showSetupWelcome);
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+            return;
+        }
+        
+        await showSetupWelcome({ 
+            message: originalMessage, 
+            setupMessage: interaction.message 
+        });
+    } catch (error) {
+        console.error('Error in showSetupWelcome:', error);
+        await interaction.followUp({
+            content: 'An error occurred with the setup wizard. Please try the setup command again.',
+            ephemeral: true
+        });
+    }
 }
