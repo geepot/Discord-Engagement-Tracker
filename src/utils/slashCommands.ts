@@ -12,7 +12,6 @@ import {
     SlashCommandSubcommandsOnlyBuilder
 } from 'discord.js';
 import config from '../config';
-import CommandController from '../commands/controller/CommandController';
 
 // Type definitions for slash commands
 export interface SlashCommand {
@@ -118,6 +117,8 @@ export function createModal(
  * @param interaction The slash command interaction
  */
 export async function handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+    // Dynamically import CommandController to avoid circular dependencies
+    const CommandController = (await import('../commands/controller/CommandController')).default;
     // Use the CommandController to handle all commands
     await CommandController.executeCommand(interaction);
 }

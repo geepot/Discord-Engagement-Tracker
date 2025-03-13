@@ -1,5 +1,4 @@
 import { registerCommand } from '../utils/slashCommands';
-import CommandController from './controller/CommandController';
 import CheckEngagementCommand from './implementations/CheckEngagementCommand';
 import ActivityRankingCommand from './implementations/ActivityRankingCommand';
 import ScheduleReportCommand from './implementations/ScheduleReportCommand';
@@ -9,6 +8,8 @@ import SetupCommand from './implementations/SetupCommand';
  * Register all commands with the CommandController and Discord API
  */
 export function registerCommands(): void {
+  // Get the CommandController instance
+  const CommandController = require('./controller/CommandController').default;
   // Create command instances
   const checkEngagementCommand = new CheckEngagementCommand();
   const activityRankingCommand = new ActivityRankingCommand();

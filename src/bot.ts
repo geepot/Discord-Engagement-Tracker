@@ -41,7 +41,9 @@ class EngagementBot {
             // Register general interaction handlers
             registerGeneralInteractionHandlers();
             
-            // Register commands with the CommandController
+            // Initialize and register commands with the CommandController
+            const CommandController = (await import('./commands/controller/CommandController')).default;
+            CommandController.initialize();
             registerCommands();
             
             // Register slash commands with Discord

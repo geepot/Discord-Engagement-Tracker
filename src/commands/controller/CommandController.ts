@@ -42,7 +42,14 @@ export class CommandController {
   private commands: Map<string, Command> = new Map();
   
   constructor() {
-    // Register interaction handlers
+    // Interaction handlers will be registered when needed
+  }
+
+  /**
+   * Initialize the controller
+   * This should be called after ServiceRegistry is initialized
+   */
+  public initialize(): void {
     this.registerInteractionHandlers();
   }
   
