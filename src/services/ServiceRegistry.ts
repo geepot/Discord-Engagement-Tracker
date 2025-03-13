@@ -68,11 +68,15 @@ export class ServiceRegistry {
 
   /**
    * Shutdown all registered services
+   * Services are shut down in reverse order of registration
+   * to ensure dependencies are available during shutdown
    */
   public static async shutdown(): Promise<void> {
     const services = this.getAllServices();
-    for (const service of services) {
-      await service.shutdown();
+    // Reverse the order to shut down in reverse order of registration
+    // This ensures that the database service is shut down last
+    for (let i = services.length - 1; i >= 0; i--) {
+      await services[i].shutdown();
     }
   }
 
