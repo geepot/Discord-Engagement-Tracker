@@ -118,3 +118,9 @@ export interface DbScheduledReport {
     next_run: number;
     report_type: string; // 'engagement', 'activity'
 }
+
+// Bot settings stored in database
+export interface DbBotSetting {
+    key: string;
+    value: string;
+}

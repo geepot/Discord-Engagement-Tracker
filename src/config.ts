@@ -1,5 +1,6 @@
 import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
+import database from './services/database';
 
 dotenv.config();
 
@@ -7,6 +8,18 @@ dotenv.config();
 if (!process.env.DISCORD_BOT_TOKEN) {
     console.error('Missing DISCORD_BOT_TOKEN environment variable. Please check your .env file.');
     process.exit(1);
+}
+
+// Helper function to get non-sensitive settings from database or fallback to env vars
+function getSetting(key: string, envVar?: string): string | undefined {
+    // Try to get from database first
+    const dbValue = database.getBotSetting(key);
+    if (dbValue !== null) {
+        return dbValue;
+    }
+    
+    // Fallback to environment variable
+    return envVar;
 }
 
 interface BotConfig {
@@ -53,10 +66,12 @@ interface BotConfig {
 }
 
 const config: BotConfig = {
-    // Bot configuration
+    // Bot configuration - sensitive data always from env vars
     token: process.env.DISCORD_BOT_TOKEN,
-    trackedChannelId: process.env.TRACKED_CHANNEL_ID || '',
-    adminChannelId: process.env.ADMIN_CHANNEL_ID,
+    
+    // Settings that can be updated via setup command - check database first
+    trackedChannelId: getSetting('TRACKED_CHANNEL_ID', process.env.TRACKED_CHANNEL_ID) || '',
+    adminChannelId: getSetting('ADMIN_CHANNEL_ID', process.env.ADMIN_CHANNEL_ID),
     
     // Discord.js intents
     intents: [
@@ -88,8 +103,8 @@ const config: BotConfig = {
     permissions: {
         adminCommands: ['set-prefix', 'schedule-report'],
         modCommands: ['check-engagement', 'most-active', 'most-inactive'],
-        adminRoleIds: process.env.ADMIN_ROLE_IDS ? process.env.ADMIN_ROLE_IDS.split(',') : [],
-        modRoleIds: process.env.MOD_ROLE_IDS ? process.env.MOD_ROLE_IDS.split(',') : []
+        adminRoleIds: getSetting('ADMIN_ROLE_IDS', process.env.ADMIN_ROLE_IDS)?.split(',') || [],
+        modRoleIds: getSetting('MOD_ROLE_IDS', process.env.MOD_ROLE_IDS)?.split(',') || []
     },
 
     // Engagement metrics and settings

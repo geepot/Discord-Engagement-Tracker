@@ -7,7 +7,7 @@ import handleCheckEngagement from './commands/checkEngagement';
 import { handleMostActive, handleMostInactive } from './commands/activityRanking';
 import handleSetPrefix from './commands/setPrefix';
 import handleScheduleReport from './commands/scheduleReport';
-import handleSetup from './commands/setup';
+import handleSetup from './commands/setup/index';
 import { getCommandName, hasCommandPermission } from './utils/permissions';
 import { createDeleteButton } from './utils/messageButtons';
 

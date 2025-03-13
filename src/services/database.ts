@@ -79,6 +79,11 @@ class DatabaseService {
                     report_type TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS bot_settings (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_reactions_message_id ON reactions(message_id);
                 CREATE INDEX IF NOT EXISTS idx_read_status_message_id ON read_status(message_id);
                 CREATE INDEX IF NOT EXISTS idx_channel_members_channel_id ON channel_members(channel_id);
@@ -443,6 +448,48 @@ class DatabaseService {
             console.log('Database vacuumed successfully');
         } catch (error) {
             console.error('Error vacuuming database:', error);
+        }
+    }
+
+    // Bot settings operations
+    public saveBotSetting(key: string, value: string): void {
+        try {
+            const stmt = this.db.prepare(`
+                INSERT OR REPLACE INTO bot_settings (key, value)
+                VALUES (?, ?)
+            `);
+            stmt.run(key, value);
+            console.log(`Saved bot setting: ${key}=${value}`);
+        } catch (error) {
+            console.error('Error saving bot setting:', error);
+        }
+    }
+
+    public getBotSetting(key: string): string | null {
+        try {
+            const stmt = this.db.prepare('SELECT value FROM bot_settings WHERE key = ?');
+            const result = stmt.get(key) as { value: string } | undefined;
+            return result ? result.value : null;
+        } catch (error) {
+            console.error(`Error getting bot setting for key ${key}:`, error);
+            return null;
+        }
+    }
+
+    public getAllBotSettings(): Map<string, string> {
+        try {
+            const stmt = this.db.prepare('SELECT key, value FROM bot_settings');
+            const results = stmt.all() as { key: string, value: string }[];
+            
+            const settingsMap = new Map<string, string>();
+            for (const result of results) {
+                settingsMap.set(result.key, result.value);
+            }
+            
+            return settingsMap;
+        } catch (error) {
+            console.error('Error getting all bot settings:', error);
+            return new Map();
         }
     }
 
