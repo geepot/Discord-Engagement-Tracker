@@ -1,6 +1,8 @@
 import { TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { MessageSummary, UserMessageDetails, ActivityRankingResult } from '../types';
 import config from '../config';
+import { createMessageTracker, createDeleteButton } from './messageButtons';
+import { CommandMessageManager } from './messageManager';
 
 // Format message engagement summary
 export function formatMessageSummary(summary: MessageSummary, userDetails: UserMessageDetails): string {
@@ -167,29 +169,20 @@ export function formatActivityRanking(
 
 // Split long messages for Discord's character limit
 export async function sendLongMessage(channel: TextChannel, text: string, components?: any[]): Promise<void> {
-    // Track sent message IDs for linked deletion
-    const sentMessageIds: string[] = [];
+    // Create a message manager for this operation
+    const messageManager = new CommandMessageManager(channel);
     
+    // If the text fits in a single message
     if (text.length <= 1900) {
-        // Create delete button
-        const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('delete_message')
-                    .setLabel('Delete')
-                    .setStyle(ButtonStyle.Danger)
-            );
+        // Send the message with the message manager
+        await messageManager.sendMessage(text);
         
-        // Use provided components or default to delete button
-        const messageComponents = components || [deleteButton];
-        
-        await channel.send({ 
-            content: text, 
-            components: messageComponents 
-        });
+        // Add delete button to the message
+        await messageManager.addDeleteButtonToLastMessage();
         return;
     }
 
+    // Split the text into chunks
     const messages: string[] = [];
     while (text.length > 0) {
         let chunk = text.slice(0, 1900);
@@ -202,30 +195,11 @@ export async function sendLongMessage(channel: TextChannel, text: string, compon
         text = text.slice(chunk.length);
     }
     
-    // Send all chunks except the last one and collect their IDs
-    for (let i = 0; i < messages.length - 1; i++) {
-        const sentMessage = await channel.send({ 
-            content: messages[i], 
-            components: [] // No buttons on intermediate messages
-        });
-        sentMessageIds.push(sentMessage.id);
+    // Send all chunks using the message manager
+    for (const chunk of messages) {
+        await messageManager.sendMessage(chunk);
     }
     
-    // Create delete button that deletes all related messages
-    const deleteButton = new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-            new ButtonBuilder()
-                .setCustomId(`delete_message:${sentMessageIds.join(':')}`)
-                .setLabel('Delete')
-                .setStyle(ButtonStyle.Danger)
-        );
-    
-    // Use provided components or default to delete button
-    const messageComponents = components || [deleteButton];
-    
-    // Send the last chunk with delete button that deletes all related messages
-    await channel.send({ 
-        content: messages[messages.length - 1], 
-        components: messageComponents 
-    });
+    // Add delete button to the last message that will delete all messages
+    await messageManager.addDeleteButtonToLastMessage();
 }

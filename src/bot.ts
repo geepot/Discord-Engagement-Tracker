@@ -9,6 +9,7 @@ import handleSetPrefix from './commands/setPrefix';
 import handleScheduleReport from './commands/scheduleReport';
 import handleSetup from './commands/setup';
 import { getCommandName, hasCommandPermission } from './utils/permissions';
+import { createDeleteButton } from './utils/messageButtons';
 
 class EngagementBot {
     private client: Client;
@@ -84,33 +85,42 @@ class EngagementBot {
                 
                 // Handle delete message button
                 if (customId.startsWith('delete_message')) {
-                    const message = buttonInteraction.message;
-                    const parts = customId.split(':');
-                    
-                    // Delete the current message
-                    if (message.deletable) {
-                        await message.delete().catch(error => {
-                            console.error('Error deleting message:', error);
-                        });
-                    }
-                    
-                    // If there are related message IDs to delete
-                    if (parts.length > 1) {
-                        for (let i = 1; i < parts.length; i++) {
-                            try {
-                                const relatedMessageId = parts[i];
-                                // Try to fetch and delete the related message
-                                const channel = message.channel;
-                                const relatedMessage = await channel.messages.fetch(relatedMessageId);
-                                if (relatedMessage && relatedMessage.deletable) {
-                                    await relatedMessage.delete();
+                    try {
+                        const message = buttonInteraction.message;
+                        const parts = customId.split(':');
+                        const messageIds = parts.slice(1); // Skip the 'delete_message' part
+                        
+                        // Delete the interaction message first
+                        if (message.deletable) {
+                            await message.delete().catch(error => {
+                                console.error('Error deleting message:', error);
+                            });
+                        }
+                        
+                        // Delete any linked messages
+                        if (messageIds.length > 0) {
+                            for (const id of messageIds) {
+                                try {
+                                    const channel = message.channel;
+                                    const relatedMessage = await channel.messages.fetch(id);
+                                    if (relatedMessage && relatedMessage.deletable) {
+                                        await relatedMessage.delete();
+                                    }
+                                } catch (error) {
+                                    console.error(`Error deleting linked message ${id}:`, error);
+                                    // Continue with other messages
                                 }
-                            } catch (error) {
-                                console.error('Error deleting related message:', error);
                             }
                         }
+                    } catch (error) {
+                        console.error('Error handling delete button:', error);
+                        if (!buttonInteraction.replied) {
+                            await buttonInteraction.reply({
+                                content: 'Failed to delete message(s).',
+                                ephemeral: true
+                            });
+                        }
                     }
-                    
                     return;
                 }
                 
@@ -241,20 +251,10 @@ class EngagementBot {
 
     // Add a delete button to a message
     private addDeleteButton(message: Message): void {
-        // Import necessary classes from discord.js
-        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-        
-        // Create a delete button
-        const deleteButton = new ButtonBuilder()
-            .setCustomId('delete_message')
-            .setLabel('Delete')
-            .setStyle(ButtonStyle.Danger);
-        
-        // Create an action row with the delete button
-        const row = new ActionRowBuilder().addComponents(deleteButton);
-        
         // Edit the message to add the button
-        message.edit({ components: [row] }).catch(error => {
+        message.edit({ 
+            components: [createDeleteButton()] 
+        }).catch(error => {
             console.error('Error adding delete button:', error);
         });
     }

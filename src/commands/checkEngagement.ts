@@ -1,24 +1,9 @@
-import { Message, TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { Message, TextChannel } from 'discord.js';
 import messageTracker from '../services/messageTracker';
 import engagementStats from '../services/engagementStats';
 import { formatMessageSummary, sendLongMessage } from '../utils/formatters';
-
-// Helper function to create a delete button
-function createDeleteButton(relatedMessageIds: string[] = []): ActionRowBuilder<ButtonBuilder> {
-    // Create the custom ID with related message IDs
-    let customId = 'delete_message';
-    if (relatedMessageIds.length > 0) {
-        customId += ':' + relatedMessageIds.join(':');
-    }
-    
-    return new ActionRowBuilder<ButtonBuilder>()
-        .addComponents(
-            new ButtonBuilder()
-                .setCustomId(customId)
-                .setLabel('Delete')
-                .setStyle(ButtonStyle.Danger)
-        );
-}
+import { createMessageWithDeleteButton } from '../utils/messageButtons';
+import { CommandMessageManager } from '../utils/messageManager';
 
 async function handleCheckEngagement(message: Message, messageId?: string): Promise<void> {
     // Ensure we're in a text channel
@@ -28,16 +13,18 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
     }
 
     const channel = message.channel;
+    
+    // Create a message manager for this command
+    const messageManager = new CommandMessageManager(channel);
 
     try {
         if (messageId) {
             // Check specific message
             const data = messageTracker.getMessage(messageId);
             if (!data) {
-                await channel.send({
-                    content: 'Message not found or not being tracked.',
-                    components: [createDeleteButton()]
-                });
+                await channel.send(
+                    createMessageWithDeleteButton('Message not found or not being tracked.')
+                );
                 return;
             }
 
@@ -46,31 +33,33 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
             
             if (summary && userDetails) {
                 const formattedSummary = formatMessageSummary(summary, userDetails);
-                await sendLongMessage(channel, formattedSummary);
+                
+                // Use the message manager to send and track the message
+                await messageManager.sendMessage(formattedSummary);
+                
+                // Add delete button to the last message
+                await messageManager.addDeleteButtonToLastMessage();
             } else {
-                await channel.send({
-                    content: 'Could not generate summary for this message.',
-                    components: [createDeleteButton()]
-                });
+                await channel.send(
+                    createMessageWithDeleteButton('Could not generate summary for this message.')
+                );
             }
         } else {
             // Check all tracked messages
             const trackedMessages = messageTracker.getAllMessages();
             
             if (trackedMessages.length === 0) {
-                await channel.send({
-                    content: 'No messages are currently being tracked.',
-                    components: [createDeleteButton()]
-                });
+                await channel.send(
+                    createMessageWithDeleteButton('No messages are currently being tracked.')
+                );
                 return;
             }
             
             // Warn if there are many messages
             if (trackedMessages.length > 5) {
-                await channel.send({
-                    content: `⚠️ Generating summaries for ${trackedMessages.length} messages. This may take a moment...`,
-                    components: [createDeleteButton()]
-                });
+                await messageManager.sendMessage(
+                    `⚠️ Generating summaries for ${trackedMessages.length} messages. This may take a moment...`
+                );
             }
 
             let processedCount = 0;
@@ -81,7 +70,10 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
                     
                     if (summary && userDetails) {
                         const formattedSummary = formatMessageSummary(summary, userDetails);
-                        await sendLongMessage(channel, formattedSummary);
+                        
+                        // Use the message manager to send and track the message
+                        await messageManager.sendMessage(formattedSummary);
+                        
                         processedCount++;
                     }
                 } catch (messageError) {
@@ -91,19 +83,20 @@ async function handleCheckEngagement(message: Message, messageId?: string): Prom
             }
             
             if (processedCount < trackedMessages.length) {
-                await channel.send({
-                    content: `⚠️ Only ${processedCount} of ${trackedMessages.length} messages could be processed.`,
-                    components: [createDeleteButton()]
-                });
+                await messageManager.sendMessage(
+                    `⚠️ Only ${processedCount} of ${trackedMessages.length} messages could be processed.`
+                );
             }
+            
+            // Add delete button to the last message
+            await messageManager.addDeleteButtonToLastMessage();
         }
     } catch (error) {
         console.error('Error in handleCheckEngagement:', error);
         
-        await channel.send({
-            content: 'An error occurred while processing the command.',
-            components: [createDeleteButton()]
-        });
+        await channel.send(
+            createMessageWithDeleteButton('An error occurred while processing the command.')
+        );
     }
 }
 
