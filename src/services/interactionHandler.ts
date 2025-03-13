@@ -2,18 +2,22 @@ import {
     Interaction, 
     ButtonInteraction, 
     ModalSubmitInteraction,
+    ChatInputCommandInteraction,
     Message, 
     Client,
     Events
 } from 'discord.js';
+import { handleSlashCommand } from '../utils/slashCommands';
 
 type ButtonInteractionHandler = (interaction: ButtonInteraction) => Promise<void>;
 type ModalSubmitInteractionHandler = (interaction: ModalSubmitInteraction) => Promise<void>;
+type SlashCommandInteractionHandler = (interaction: ChatInputCommandInteraction) => Promise<void>;
 
 class InteractionHandlerService {
     private buttonHandlers: Map<string, ButtonInteractionHandler> = new Map();
     private prefixHandlers: Map<string, ButtonInteractionHandler> = new Map();
     private modalHandlers: Map<string, ModalSubmitInteractionHandler> = new Map();
+    private slashCommandHandlers: Map<string, SlashCommandInteractionHandler> = new Map();
     private client: Client | null = null;
 
     /**
@@ -69,6 +73,19 @@ class InteractionHandlerService {
     }
 
     /**
+     * Register a handler for a specific slash command
+     * @param commandName The exact command name to handle
+     * @param handler The handler function, or null to unregister
+     */
+    public registerSlashCommandHandler(commandName: string, handler: SlashCommandInteractionHandler | null): void {
+        if (handler === null) {
+            this.slashCommandHandlers.delete(commandName);
+        } else {
+            this.slashCommandHandlers.set(commandName, handler);
+        }
+    }
+
+    /**
      * Handle an incoming interaction
      * @param interaction The Discord.js interaction
      */
@@ -78,6 +95,9 @@ class InteractionHandlerService {
                 await this.handleButtonInteraction(interaction);
             } else if (interaction.isModalSubmit()) {
                 await this.handleModalSubmitInteraction(interaction);
+            } else if (interaction.isChatInputCommand()) {
+                // Use the slash command handler from slashCommands.ts
+                await handleSlashCommand(interaction);
             }
         } catch (error) {
             console.error('Error handling interaction:', error);

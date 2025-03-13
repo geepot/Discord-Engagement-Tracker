@@ -22,8 +22,7 @@ export const showSetupWelcome: SetupHandler = async ({ message, setupMessage, in
         .addFields(
             { name: 'Current Configuration', value: 'Select an option below to view or modify settings.' },
             { name: 'Tracked Channel', value: `<#${config.trackedChannelId || 'Not set'}>`, inline: true },
-            { name: 'Admin Channel', value: config.adminChannelId ? `<#${config.adminChannelId}>` : 'Not set', inline: true },
-            { name: 'Command Prefix', value: config.commandPrefix, inline: true }
+            { name: 'Admin Channel', value: config.adminChannelId ? `<#${config.adminChannelId}>` : 'Not set', inline: true }
         )
         .setFooter({ text: 'Discord Engagement Tracker • Setup Wizard' });
     
@@ -38,12 +37,7 @@ export const showSetupWelcome: SetupHandler = async ({ message, setupMessage, in
                 .setCustomId('setup_admin_channel')
                 .setLabel('Set Admin Channel')
                 .setStyle(ButtonStyle.Primary)
-                .setEmoji('🔔'),
-            new ButtonBuilder()
-                .setCustomId('setup_prefix')
-                .setLabel('Set Command Prefix')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('⌨️')
+                .setEmoji('🔔')
         );
         
     const row2 = new ActionRowBuilder<ButtonBuilder>()

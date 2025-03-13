@@ -206,7 +206,7 @@ export function registerSetupInteractionHandlers(): void {
     // Register handlers for setup buttons
     interactionHandler.registerButtonHandler('setup_channel', handleSetupChannelButton);
     interactionHandler.registerButtonHandler('setup_admin_channel', handleSetupAdminChannelButton);
-    interactionHandler.registerButtonHandler('setup_prefix', handleSetupPrefixButton);
+    // Prefix setup is no longer needed with slash commands
     interactionHandler.registerButtonHandler('setup_roles', handleSetupRolesButton);
     interactionHandler.registerButtonHandler('setup_test', handleSetupTestButton);
     interactionHandler.registerButtonHandler('setup_back_to_main', handleSetupBackToMainButton);

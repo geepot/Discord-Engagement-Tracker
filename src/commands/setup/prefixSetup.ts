@@ -1,14 +1,21 @@
-import { TextChannel } from 'discord.js';
 import { SetupContext, SetupHandler } from './types';
 import { setShowPrefixSetup } from './setupHandlers';
 
 /**
- * This function is no longer used as it's been replaced by the modal approach in setupInteractions.ts
- * Keeping an empty implementation for backward compatibility
+ * This function is no longer needed as we're using slash commands instead of prefix commands.
+ * Keeping an empty implementation for backward compatibility.
  */
 export const showPrefixSetup: SetupHandler = async ({ message, setupMessage }: SetupContext): Promise<void> => {
-    console.log('Prefix setup requested via legacy method');
-    // No implementation needed as this is handled by the modal in setupInteractions.ts
+    console.log('Prefix setup is deprecated - using slash commands instead');
+    
+    // If this is somehow called, inform the user that prefix setup is no longer needed
+    if (setupMessage && setupMessage.edit) {
+        await setupMessage.edit({
+            content: 'Prefix setup is no longer needed as the bot now uses slash commands.',
+            embeds: [],
+            components: []
+        });
+    }
 };
 
 // Register the prefix setup handler

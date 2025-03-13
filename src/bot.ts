@@ -5,13 +5,14 @@ import database from './services/database';
 import reportScheduler from './services/reportScheduler';
 import interactionHandler from './services/interactionHandler';
 import { registerGeneralInteractionHandlers } from './utils/interactionHandlers';
-import handleCheckEngagement from './commands/checkEngagement';
-import { handleMostActive, handleMostInactive } from './commands/activityRanking';
-import handleSetPrefix from './commands/setPrefix';
-import handleScheduleReport from './commands/scheduleReport';
-import handleSetup from './commands/setup/index';
-import { getCommandName, hasCommandPermission } from './utils/permissions';
+import { registerSlashCommands } from './utils/slashCommands';
 import { createDeleteButton } from './utils/messageButtons';
+
+// Import slash command modules
+import './commands/checkEngagement';
+import './commands/activityRanking';
+import './commands/scheduleReport';
+import './commands/setup/index';
 
 class EngagementBot {
     private client: Client;
@@ -29,7 +30,7 @@ class EngagementBot {
 
     private setupEventHandlers(): void {
         // Ready event
-        this.client.once(Events.ClientReady, () => {
+        this.client.once(Events.ClientReady, async () => {
             console.log(`Logged in as ${this.client.user?.tag}`);
             
             // Load settings from database
@@ -46,6 +47,9 @@ class EngagementBot {
             
             // Register general interaction handlers
             registerGeneralInteractionHandlers();
+            
+            // Register slash commands with Discord
+            await registerSlashCommands(this.client);
         });
 
         // Message creation
@@ -58,20 +62,6 @@ class EngagementBot {
                     message.channel.permissionsFor(member)?.has('ViewChannel')
                 );
                 messageTracker.trackMessage(message, channelMembersList);
-            }
-
-            // Check for custom guild prefix
-            let prefix = config.commandPrefix;
-            if (message.guild) {
-                const customPrefix = database.getGuildPrefix(message.guild.id);
-                if (customPrefix) {
-                    prefix = customPrefix;
-                }
-            }
-            
-            // Handle commands
-            if (message.content.startsWith(prefix)) {
-                await this.handleCommand(message, prefix);
             }
         });
 
@@ -123,63 +113,6 @@ class EngagementBot {
         }
     }
 
-    private async handleCommand(message: Message, prefix: string): Promise<void> {
-        const command = getCommandName(message, prefix);
-        
-        // Check if user has permission to use this command
-        if (!hasCommandPermission(message, command)) {
-            const reply = await message.reply('You do not have permission to use this command.');
-            this.addDeleteButton(reply);
-            return;
-        }
-        
-        try {
-            // Process the command
-            switch (command) {
-                case config.commands.checkEngagement: {
-                    const messageId = message.content.split(' ')[1];
-                    await handleCheckEngagement(message, messageId);
-                    break;
-                }
-    
-                case config.commands.mostActive:
-                    await handleMostActive(message);
-                    break;
-    
-                case config.commands.mostInactive:
-                    await handleMostInactive(message);
-                    break;
-                    
-                case config.commands.setPrefix:
-                    await handleSetPrefix(message);
-                    break;
-                    
-                case config.commands.report:
-                    await handleScheduleReport(message);
-                    break;
-                    
-                case 'setup':
-                    await handleSetup(message);
-                    break;
-                    
-                default:
-                    // Unknown command
-                    break;
-            }
-            
-            // Delete the command message after processing
-            if (message.deletable) {
-                await message.delete().catch(error => {
-                    console.error('Error deleting command message:', error);
-                });
-            }
-        } catch (error) {
-            console.error(`Error handling command ${command}:`, error);
-            if (message.channel instanceof TextChannel) {
-                await message.channel.send('An error occurred while processing the command.');
-            }
-        }
-    }
 
     // Add a delete button to a message
     private addDeleteButton(message: Message): void {

@@ -1,4 +1,13 @@
-import { Message, TextChannel, ButtonInteraction, ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
+import { 
+    Message, 
+    TextChannel, 
+    ButtonInteraction, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    ActionRowBuilder,
+    SlashCommandBuilder,
+    ChatInputCommandInteraction
+} from 'discord.js';
 import messageTracker from '../services/messageTracker';
 import engagementStats from '../services/engagementStats';
 import { formatActivityRanking } from '../utils/formatters';
@@ -6,6 +15,65 @@ import { createMessageWithDeleteButton } from '../utils/messageButtons';
 import { CommandMessageManager } from '../utils/messageManager';
 import config from '../config';
 import database from '../services/database';
+import { registerCommand } from '../utils/slashCommands';
+
+// Define the slash commands
+const mostActiveCommand = new SlashCommandBuilder()
+    .setName('most-active')
+    .setDescription('Show the most active users in the tracked channel')
+    .addIntegerOption(option => 
+        option
+            .setName('count')
+            .setDescription('Number of users to show (default: 10)')
+            .setRequired(false)
+            .setMinValue(1)
+            .setMaxValue(100)
+    )
+    .addIntegerOption(option => 
+        option
+            .setName('page')
+            .setDescription('Page number (default: 1)')
+            .setRequired(false)
+            .setMinValue(1)
+    );
+
+const mostInactiveCommand = new SlashCommandBuilder()
+    .setName('most-inactive')
+    .setDescription('Show the least active users in the tracked channel')
+    .addIntegerOption(option => 
+        option
+            .setName('count')
+            .setDescription('Number of users to show (default: 10)')
+            .setRequired(false)
+            .setMinValue(1)
+            .setMaxValue(100)
+    )
+    .addIntegerOption(option => 
+        option
+            .setName('page')
+            .setDescription('Page number (default: 1)')
+            .setRequired(false)
+            .setMinValue(1)
+    );
+
+// Register the slash commands
+registerCommand({
+    data: mostActiveCommand,
+    execute: async (interaction) => {
+        const count = interaction.options.getInteger('count') || config.defaults.activityRankingCount;
+        const page = interaction.options.getInteger('page') || 1;
+        await handler.handleActivityRanking(interaction, true, count, page);
+    }
+});
+
+registerCommand({
+    data: mostInactiveCommand,
+    execute: async (interaction) => {
+        const count = interaction.options.getInteger('count') || config.defaults.activityRankingCount;
+        const page = interaction.options.getInteger('page') || 1;
+        await handler.handleActivityRanking(interaction, false, count, page);
+    }
+});
 
 class ActivityRankingHandler {
     private readonly maxAllowedCount: number = 100; // Safety limit for large servers
@@ -67,13 +135,15 @@ class ActivityRankingHandler {
     }
 
     public async handleActivityRanking(
-        source: Message | ButtonInteraction, 
+        source: Message | ButtonInteraction | ChatInputCommandInteraction, 
         isActive = true,
         initialCount?: number,
         initialPage?: number
     ): Promise<void> {
-        // Determine if this is a message command or button interaction
+        // Determine the type of source
         const isMessage = source instanceof Message;
+        const isButtonInteraction = source instanceof ButtonInteraction;
+        const isSlashCommand = source instanceof ChatInputCommandInteraction;
         
         // Get the channel
         let channel: TextChannel;
@@ -94,9 +164,21 @@ class ActivityRankingHandler {
         try {
             // Check if there are messages being tracked
             if (!messageTracker.hasMessages()) {
-                await channel.send(
-                    createMessageWithDeleteButton('No messages are currently being tracked.')
-                );
+                if (isSlashCommand) {
+                    await (source as ChatInputCommandInteraction).reply({
+                        content: 'No messages are currently being tracked.',
+                        ephemeral: true
+                    });
+                } else if (isButtonInteraction) {
+                    await (source as ButtonInteraction).update({
+                        content: 'No messages are currently being tracked.',
+                        components: []
+                    });
+                } else {
+                    await channel.send(
+                        createMessageWithDeleteButton('No messages are currently being tracked.')
+                    );
+                }
                 return;
             }
 
@@ -122,9 +204,21 @@ class ActivityRankingHandler {
             // Get channel statistics
             const stats = await this.getChannelStats();
             if (!stats) {
-                await channel.send(
-                    createMessageWithDeleteButton('Could not fetch channel statistics.')
-                );
+                if (isSlashCommand) {
+                    await (source as ChatInputCommandInteraction).reply({
+                        content: 'Could not fetch channel statistics.',
+                        ephemeral: true
+                    });
+                } else if (isButtonInteraction) {
+                    await (source as ButtonInteraction).update({
+                        content: 'Could not fetch channel statistics.',
+                        components: []
+                    });
+                } else {
+                    await channel.send(
+                        createMessageWithDeleteButton('Could not fetch channel statistics.')
+                    );
+                }
                 return;
             }
 
@@ -135,9 +229,21 @@ class ActivityRankingHandler {
             // Generate rankings for the requested page
             const rankedUsers = await engagementStats.getActivityRanking(count, isActive, page);
             if (rankedUsers.length === 0) {
-                await channel.send(
-                    createMessageWithDeleteButton('No user activity data available.')
-                );
+                if (isSlashCommand) {
+                    await (source as ChatInputCommandInteraction).reply({
+                        content: 'No user activity data available.',
+                        ephemeral: true
+                    });
+                } else if (isButtonInteraction) {
+                    await (source as ButtonInteraction).update({
+                        content: 'No user activity data available.',
+                        components: []
+                    });
+                } else {
+                    await channel.send(
+                        createMessageWithDeleteButton('No user activity data available.')
+                    );
+                }
                 return;
             }
 
@@ -156,27 +262,17 @@ class ActivityRankingHandler {
             // Create pagination buttons
             const paginationButtons = this.createPaginationButtons(isActive, count, page, totalPages);
             
-            // Handle message command vs button interaction
-            if (isMessage) {
-                // Create a message manager for this command
-                const messageManager = new CommandMessageManager(channel);
+            // Handle different source types
+            if (isSlashCommand) {
+                // For slash commands, defer the reply first
+                const interaction = source as ChatInputCommandInteraction;
+                await interaction.deferReply();
                 
-                // For message commands, send new messages
+                // Generate summary text
                 const summaryText = await this.generateSummaryText(stats, isActive);
                 
-                // Send summary message without delete button
-                const summaryMessage = await messageManager.sendMessage(summaryText);
-                
-                // Send ranking message with pagination buttons
-                await messageManager.sendMessage(formattedRanking);
-                
-                // Add warning if there's a big difference between active and total members
-                if (stats.activeMembers < stats.totalMembers * 0.5) {
-                    await messageManager.sendMessage(
-                        '⚠️ **Note:** Less than 50% of members have activity. ' +
-                        'Rankings might not represent overall channel engagement.'
-                    );
-                }
+                // Send summary message
+                const summaryMessage = await channel.send(summaryText);
                 
                 // Create new pagination buttons with the summary message ID included
                 const updatedPaginationButtons = [
@@ -192,9 +288,30 @@ class ActivityRankingHandler {
                         .setDisabled(page >= totalPages)
                 ];
                 
-                // Add delete button to the last message that will delete all messages
-                await messageManager.addDeleteButtonToLastMessage(updatedPaginationButtons);
-            } else {
+                // Create a delete button that will delete both the current message and the summary message
+                const deleteButton = new ButtonBuilder()
+                    .setCustomId(`delete_message:${summaryMessage.id}`)
+                    .setLabel('Delete')
+                    .setStyle(ButtonStyle.Danger);
+                
+                // Create an action row with the updated buttons
+                const actionRow = new ActionRowBuilder<ButtonBuilder>()
+                    .addComponents([...updatedPaginationButtons, deleteButton]);
+                
+                // Send the ranking message with pagination buttons
+                await interaction.editReply({
+                    content: formattedRanking,
+                    components: [actionRow]
+                });
+                
+                // Add warning if there's a big difference between active and total members
+                if (stats.activeMembers < stats.totalMembers * 0.5) {
+                    await channel.send(
+                        '⚠️ **Note:** Less than 50% of members have activity. ' +
+                        'Rankings might not represent overall channel engagement.'
+                    );
+                }
+            } else if (isButtonInteraction) {
                 // For button interactions, update the existing message
                 const buttonInteraction = source as ButtonInteraction;
                 
@@ -228,7 +345,7 @@ class ActivityRankingHandler {
                         .addComponents([...updatedPaginationButtons, deleteButton]);
                     
                     // Update the message with new content and buttons
-                    await buttonInteraction.editReply({
+                    await buttonInteraction.update({
                         content: formattedRanking,
                         components: [actionRow]
                     });
@@ -244,39 +361,80 @@ class ActivityRankingHandler {
                         ]);
                     
                     // Update the message with new content and buttons
-                    await buttonInteraction.editReply({
+                    await buttonInteraction.update({
                         content: formattedRanking,
                         components: [actionRow]
                     });
                 }
+            } else {
+                // For message commands, send new messages
+                // Create a message manager for this command
+                const messageManager = new CommandMessageManager(channel);
+                
+                // Generate summary text
+                const summaryText = await this.generateSummaryText(stats, isActive);
+                
+                // Send summary message without delete button
+                const summaryMessage = await messageManager.sendMessage(summaryText);
+                
+                // Send ranking message with pagination buttons
+                await messageManager.sendMessage(formattedRanking);
+                
+                // Add warning if there's a big difference between active and total members
+                if (stats.activeMembers < stats.totalMembers * 0.5) {
+                    await messageManager.sendMessage(
+                        '⚠️ **Note:** Less than 50% of members have activity. ' +
+                        'Rankings might not represent overall channel engagement.'
+                    );
+                }
+                
+                // Create new pagination buttons with the summary message ID included
+                const updatedPaginationButtons = [
+                    new ButtonBuilder()
+                        .setCustomId(`activity_ranking:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessage.id}`)
+                        .setLabel('Previous')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(page <= 1),
+                    new ButtonBuilder()
+                        .setCustomId(`activity_ranking:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessage.id}`)
+                        .setLabel('Next')
+                        .setStyle(ButtonStyle.Primary)
+                        .setDisabled(page >= totalPages)
+                ];
+                
+                // Add delete button to the last message that will delete all messages
+                await messageManager.addDeleteButtonToLastMessage(updatedPaginationButtons);
             }
         } catch (error) {
             console.error('Error generating activity ranking:', error);
             
-            if (error instanceof Error && 
-                (error.message.includes('Please provide') || error.message.includes('Maximum allowed'))) {
-                
-                if (isMessage) {
-                    await channel.send(
-                        createMessageWithDeleteButton(error.message)
-                    );
-                } else {
-                    await (source as ButtonInteraction).editReply({
-                        content: error.message,
+            const errorMessage = error instanceof Error && 
+                (error.message.includes('Please provide') || error.message.includes('Maximum allowed'))
+                ? error.message
+                : 'An error occurred while generating activity ranking.';
+            
+            if (isSlashCommand) {
+                const interaction = source as ChatInputCommandInteraction;
+                if (interaction.deferred) {
+                    await interaction.editReply({
+                        content: errorMessage,
                         components: []
                     });
+                } else {
+                    await interaction.reply({
+                        content: errorMessage,
+                        ephemeral: true
+                    });
                 }
+            } else if (isButtonInteraction) {
+                await (source as ButtonInteraction).update({
+                    content: errorMessage,
+                    components: []
+                });
             } else {
-                if (isMessage) {
-                    await channel.send(
-                        createMessageWithDeleteButton('An error occurred while generating activity ranking.')
-                    );
-                } else {
-                    await (source as ButtonInteraction).editReply({
-                        content: 'An error occurred while generating activity ranking.',
-                        components: []
-                    });
-                }
+                await channel.send(
+                    createMessageWithDeleteButton(errorMessage)
+                );
             }
         }
     }
@@ -284,14 +442,15 @@ class ActivityRankingHandler {
 
 const handler = new ActivityRankingHandler();
 
+// For backward compatibility with any code that might still use the old functions
 export const handleMostActive = (
-    source: Message | ButtonInteraction,
+    source: Message | ButtonInteraction | ChatInputCommandInteraction,
     count?: number,
     page?: number
 ) => handler.handleActivityRanking(source, true, count, page);
 
 export const handleMostInactive = (
-    source: Message | ButtonInteraction,
+    source: Message | ButtonInteraction | ChatInputCommandInteraction,
     count?: number,
     page?: number
 ) => handler.handleActivityRanking(source, false, count, page);
