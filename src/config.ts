@@ -1,6 +1,5 @@
 import { GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
-import database from './services/database';
 
 dotenv.config();
 
@@ -10,16 +9,17 @@ if (!process.env.DISCORD_BOT_TOKEN) {
     process.exit(1);
 }
 
-// Helper function to get non-sensitive settings from database or fallback to env vars
-function getSetting(key: string, envVar?: string): string | undefined {
-    // Try to get from database first
-    const dbValue = database.getBotSetting(key);
-    if (dbValue !== null) {
-        return dbValue;
-    }
-    
-    // Fallback to environment variable
-    return envVar;
+// This will be populated after database initialization
+let databaseSettings: Map<string, string> = new Map();
+
+// Function to update settings from database after initialization
+export function updateSettingsFromDatabase(settings: Map<string, string>): void {
+    databaseSettings = settings;
+}
+
+// Helper function to get settings (will be used after database is initialized)
+function getSetting(key: string): string | undefined {
+    return databaseSettings.get(key);
 }
 
 interface BotConfig {
@@ -69,9 +69,9 @@ const config: BotConfig = {
     // Bot configuration - sensitive data always from env vars
     token: process.env.DISCORD_BOT_TOKEN,
     
-    // Settings that can be updated via setup command - check database first
-    trackedChannelId: getSetting('TRACKED_CHANNEL_ID', process.env.TRACKED_CHANNEL_ID) || '',
-    adminChannelId: getSetting('ADMIN_CHANNEL_ID', process.env.ADMIN_CHANNEL_ID),
+    // Settings that can be updated via setup command
+    trackedChannelId: '',  // Will be loaded from database after initialization
+    adminChannelId: undefined,  // Will be loaded from database after initialization
     
     // Discord.js intents
     intents: [
@@ -103,8 +103,8 @@ const config: BotConfig = {
     permissions: {
         adminCommands: ['set-prefix', 'schedule-report'],
         modCommands: ['check-engagement', 'most-active', 'most-inactive'],
-        adminRoleIds: getSetting('ADMIN_ROLE_IDS', process.env.ADMIN_ROLE_IDS)?.split(',') || [],
-        modRoleIds: getSetting('MOD_ROLE_IDS', process.env.MOD_ROLE_IDS)?.split(',') || []
+        adminRoleIds: [],  // Will be loaded from database after initialization
+        modRoleIds: []     // Will be loaded from database after initialization
     },
 
     // Engagement metrics and settings

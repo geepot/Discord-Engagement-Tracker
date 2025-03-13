@@ -1,7 +1,10 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
-import config from '../config';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 import { 
     DbMessage, 
     DbReaction, 
@@ -17,14 +20,17 @@ class DatabaseService {
     private initialized: boolean = false;
 
     constructor() {
+        // Get database path from environment variable
+        const dbPath = process.env.DATABASE_PATH || './data/engagement.db';
+        
         // Ensure the data directory exists
-        const dbDir = path.dirname(config.database.path);
+        const dbDir = path.dirname(dbPath);
         if (!fs.existsSync(dbDir)) {
             fs.mkdirSync(dbDir, { recursive: true });
         }
 
         // Initialize the database
-        this.db = new Database(config.database.path);
+        this.db = new Database(dbPath);
         this.setupDatabase();
     }
 

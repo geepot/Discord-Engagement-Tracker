@@ -1,5 +1,5 @@
 import { Client, Events, Message, GatewayIntentBits, TextChannel, GuildTextBasedChannel, Interaction, ButtonInteraction } from 'discord.js';
-import config from './config';
+import config, { updateSettingsFromDatabase } from './config';
 import messageTracker from './services/messageTracker';
 import database from './services/database';
 import reportScheduler from './services/reportScheduler';
@@ -29,6 +29,11 @@ class EngagementBot {
         // Ready event
         this.client.once(Events.ClientReady, () => {
             console.log(`Logged in as ${this.client.user?.tag}`);
+            
+            // Load settings from database
+            this.loadSettingsFromDatabase();
+            
+            // Process existing messages
             this.processExistingMessages();
             
             // Initialize report scheduler
@@ -257,6 +262,43 @@ class EngagementBot {
         }).catch(error => {
             console.error('Error adding delete button:', error);
         });
+    }
+
+    // Load settings from database
+    private loadSettingsFromDatabase(): void {
+        try {
+            const settings = database.getAllBotSettings();
+            
+            // Update config with database settings
+            updateSettingsFromDatabase(settings);
+            
+            // Update specific config properties if needed
+            if (settings.has('TRACKED_CHANNEL_ID')) {
+                config.trackedChannelId = settings.get('TRACKED_CHANNEL_ID');
+            }
+            
+            if (settings.has('ADMIN_CHANNEL_ID')) {
+                config.adminChannelId = settings.get('ADMIN_CHANNEL_ID');
+            }
+            
+            if (settings.has('ADMIN_ROLE_IDS')) {
+                const roleIds = settings.get('ADMIN_ROLE_IDS');
+                if (roleIds) {
+                    config.permissions.adminRoleIds = roleIds.split(',');
+                }
+            }
+            
+            if (settings.has('MOD_ROLE_IDS')) {
+                const roleIds = settings.get('MOD_ROLE_IDS');
+                if (roleIds) {
+                    config.permissions.modRoleIds = roleIds.split(',');
+                }
+            }
+            
+            console.log('Settings loaded from database');
+        } catch (error) {
+            console.error('Error loading settings from database:', error);
+        }
     }
 
     // Handle graceful shutdown
