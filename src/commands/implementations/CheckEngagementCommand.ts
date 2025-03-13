@@ -74,8 +74,8 @@ export class CheckEngagementCommand implements Command {
         // Show confirmation message with Yes/No buttons
         const confirmMessage = createConfirmationMessage(
           `⚠️ You are about to generate summaries for all ${trackedMessages.length} tracked messages. Are you sure you want to do this? (Hint: Add a message ID to the command.)`,
-          'cmd_checkengagement_confirm_yes',
-          'cmd_checkengagement_confirm_no'
+          'cmd_check-engagement_confirm_yes',
+          'cmd_check-engagement_confirm_no'
         );
         
         // Convert MessageCreateOptions to InteractionReplyOptions
@@ -111,7 +111,7 @@ export class CheckEngagementCommand implements Command {
   public async handleButtonInteraction(controller: CommandController, interaction: ButtonInteraction): Promise<boolean> {
     const buttonId = interaction.customId;
     
-    if (buttonId === 'cmd_checkengagement_confirm_yes') {
+    if (buttonId === 'cmd_check-engagement_confirm_yes') {
       // Disable the buttons
       await interaction.update({
         components: []
@@ -124,7 +124,7 @@ export class CheckEngagementCommand implements Command {
       }
       
       return true;
-    } else if (buttonId === 'cmd_checkengagement_confirm_no') {
+    } else if (buttonId === 'cmd_check-engagement_confirm_no') {
       // Disable the buttons
       await interaction.update({
         components: []
