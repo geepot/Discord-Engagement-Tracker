@@ -1,9 +1,7 @@
 import { 
   ChatInputCommandInteraction, 
   ButtonInteraction, 
-  ModalSubmitInteraction,
-  TextChannel,
-  Message
+  ModalSubmitInteraction
 } from 'discord.js';
 import ServiceRegistry from '../../services/ServiceRegistry';
 

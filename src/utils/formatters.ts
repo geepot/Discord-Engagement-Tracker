@@ -1,7 +1,7 @@
 import { TextChannel, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { MessageSummary, UserMessageDetails, ActivityRankingResult } from '../types';
 import config from '../config';
-import { createMessageTracker, createDeleteButton } from './messageButtons';
+import { createDeleteButton } from './messageButtons';
 import { CommandMessageManager } from './messageManager';
 
 // Format message engagement summary

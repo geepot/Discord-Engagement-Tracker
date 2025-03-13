@@ -66,37 +66,3 @@ export function createMessageWithDeleteButton(
         components: [createDeleteButton(relatedMessageIds)]
     };
 }
-
-/**
- * Tracks sent messages and returns a function to create a final message with a delete button
- * that will delete all tracked messages
- */
-export function createMessageTracker() {
-    const sentMessageIds: string[] = [];
-    
-    /**
-     * Adds a message ID to the tracker
-     * @param messageId The message ID to track
-     */
-    function trackMessage(messageId: string) {
-        sentMessageIds.push(messageId);
-    }
-    
-    /**
-     * Creates message options with a delete button that will delete all tracked messages
-     * @param content The message content
-     * @returns MessageCreateOptions with content and delete button
-     */
-    function createFinalMessageOptions(content: string): MessageCreateOptions {
-        return {
-            content,
-            components: [createDeleteButton(sentMessageIds)]
-        };
-    }
-    
-    return {
-        trackMessage,
-        createFinalMessageOptions,
-        getTrackedMessageIds: () => [...sentMessageIds]
-    };
-}

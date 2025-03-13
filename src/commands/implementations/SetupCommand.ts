@@ -1,7 +1,6 @@
 import { 
   ChatInputCommandInteraction, 
-  SlashCommandBuilder,
-  TextChannel
+  SlashCommandBuilder
 } from 'discord.js';
 import { Command, CommandController } from '../controller/CommandController';
 import { handleSetupCommand } from '../setup';

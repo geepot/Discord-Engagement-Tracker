@@ -6,7 +6,6 @@ import ServiceRegistry from './services/ServiceRegistry';
 
 // Import command modules
 import registerCommands from './commands/index';
-import './commands/setup/index';
 
 class EngagementBot {
     private client: Client;
