@@ -341,6 +341,20 @@ async function handleSetupChannelButton(interaction: ButtonInteraction): Promise
  * Handle the setup admin channel button
  */
 async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Promise<void> {
+    const message = interaction.message;
+    let initiatorId = null;
+    
+    // Extract initiator ID from the footer if available
+    if (message.embeds && message.embeds.length > 0) {
+        const footerText = message.embeds[0].footer?.text;
+        if (footerText) {
+            const initiatorIdMatch = footerText.match(/InitiatorID:(\d+)/);
+            if (initiatorIdMatch && initiatorIdMatch[1]) {
+                initiatorId = initiatorIdMatch[1];
+            }
+        }
+    }
+    
     const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
     if (!originalMessage) {
@@ -402,7 +416,8 @@ async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Pr
                 // Return to the main menu
                 await showSetupWelcome({ 
                     message: originalMessage, 
-                    setupMessage: interaction.message 
+                    setupMessage: interaction.message,
+                    initiatorId: initiatorId || undefined
                 });
                 return;
             }
@@ -463,6 +478,20 @@ async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Pr
  * Handle the setup prefix button
  */
 async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<void> {
+    const message = interaction.message;
+    let initiatorId = null;
+    
+    // Extract initiator ID from the footer if available
+    if (message.embeds && message.embeds.length > 0) {
+        const footerText = message.embeds[0].footer?.text;
+        if (footerText) {
+            const initiatorIdMatch = footerText.match(/InitiatorID:(\d+)/);
+            if (initiatorIdMatch && initiatorIdMatch[1]) {
+                initiatorId = initiatorIdMatch[1];
+            }
+        }
+    }
+    
     const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
     if (!originalMessage) {
@@ -533,7 +562,8 @@ async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<
             // Return to the main menu
             await showSetupWelcome({ 
                 message: originalMessage, 
-                setupMessage: interaction.message 
+                setupMessage: interaction.message,
+                initiatorId: initiatorId || undefined
             });
         } catch (error) {
             console.error('Modal submission error or timeout:', error);
@@ -915,6 +945,20 @@ async function handleSetupBackButton(interaction: ButtonInteraction): Promise<vo
     });
     
     try {
+        const message = interaction.message;
+        let initiatorId = null;
+        
+        // Extract initiator ID from the footer if available
+        if (message.embeds && message.embeds.length > 0) {
+            const footerText = message.embeds[0].footer?.text;
+            if (footerText) {
+                const initiatorIdMatch = footerText.match(/InitiatorID:(\d+)/);
+                if (initiatorIdMatch && initiatorIdMatch[1]) {
+                    initiatorId = initiatorIdMatch[1];
+                }
+            }
+        }
+        
         const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
         
         if (!originalMessage) {
@@ -947,7 +991,8 @@ async function handleSetupBackButton(interaction: ButtonInteraction): Promise<vo
         
         await showSetupWelcome({ 
             message: originalMessage, 
-            setupMessage: interaction.message 
+            setupMessage: interaction.message,
+            initiatorId: initiatorId || undefined
         });
     } catch (error) {
         console.error('Error in handleSetupBackButton:', error);
@@ -972,6 +1017,20 @@ async function handleSetupBackToMainButton(interaction: ButtonInteraction): Prom
     });
     
     try {
+        const message = interaction.message;
+        let initiatorId = null;
+        
+        // Extract initiator ID from the footer if available
+        if (message.embeds && message.embeds.length > 0) {
+            const footerText = message.embeds[0].footer?.text;
+            if (footerText) {
+                const initiatorIdMatch = footerText.match(/InitiatorID:(\d+)/);
+                if (initiatorIdMatch && initiatorIdMatch[1]) {
+                    initiatorId = initiatorIdMatch[1];
+                }
+            }
+        }
+        
         const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
         
         if (!originalMessage) {
@@ -1004,7 +1063,8 @@ async function handleSetupBackToMainButton(interaction: ButtonInteraction): Prom
         
         await showSetupWelcome({ 
             message: originalMessage, 
-            setupMessage: interaction.message 
+            setupMessage: interaction.message,
+            initiatorId: initiatorId || undefined
         });
     } catch (error) {
         console.error('Error in handleSetupBackToMainButton:', error);
