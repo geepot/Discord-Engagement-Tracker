@@ -26,7 +26,7 @@ export const showRoleSetup: SetupHandler = async ({ message, setupMessage }: Set
             { name: 'Admin Roles', value: 'Roles that can use admin commands like `set-prefix` and `schedule-report`' },
             { name: 'Mod Roles', value: 'Roles that can use moderator commands like `check-engagement` and activity rankings' }
         )
-        .setFooter({ text: 'Discord Engagement Tracker • Role Setup' });
+        .setFooter({ text: `Discord Engagement Tracker • Role Setup • SetupID:${setupMessage.id}` });
     
     const row = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(

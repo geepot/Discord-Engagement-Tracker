@@ -40,11 +40,11 @@ async function getOriginalMessage(interaction: ButtonInteraction): Promise<{
     if (message.embeds && message.embeds.length > 0) {
         const footerText = message.embeds[0].footer?.text;
         if (footerText) {
-            // Extract the original message ID from the footer text
-            const match = footerText.match(/OriginalID:(\d+)/);
+            // Extract the setup message ID from the footer text
+            const match = footerText.match(/SetupID:(\d+)/);
             if (match && match[1]) {
                 originalMessageId = match[1];
-                console.log(`Found original message ID in footer: ${originalMessageId}`);
+                console.log(`Found setup message ID in footer: ${originalMessageId}`);
             }
         }
     }
@@ -521,25 +521,39 @@ async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<
  * Handle the setup roles button
  */
 async function handleSetupRolesButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
-    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
-    
-    if (!originalMessage) {
-        await interaction.followUp({
-            content: errorMessage || 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    await interaction.deferUpdate().catch(err => {
+        console.error('Error deferring update:', err);
+        // Continue execution even if deferUpdate fails
+    });
     
     try {
+        const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
+        
+        if (!originalMessage) {
+            try {
+                await interaction.followUp({
+                    content: errorMessage || 'An error occurred. Please try the setup command again.',
+                    ephemeral: true
+                });
+            } catch (followUpError) {
+                console.error('Error sending followUp:', followUpError);
+            }
+            return;
+        }
+        
+        // Import the showRoleSetup function directly to avoid circular dependency issues
+        const { showRoleSetup } = await import('./roleSetup');
+        
         if (typeof showRoleSetup !== 'function') {
             console.error('showRoleSetup is not a function:', showRoleSetup);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
-                ephemeral: true
-            });
+            try {
+                await interaction.followUp({
+                    content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                    ephemeral: true
+                });
+            } catch (followUpError) {
+                console.error('Error sending followUp:', followUpError);
+            }
             return;
         }
         
@@ -548,11 +562,15 @@ async function handleSetupRolesButton(interaction: ButtonInteraction): Promise<v
             setupMessage: interaction.message 
         });
     } catch (error) {
-        console.error('Error in showRoleSetup:', error);
-        await interaction.followUp({
-            content: 'An error occurred with the setup wizard. Please try the setup command again.',
-            ephemeral: true
-        });
+        console.error('Error in handleSetupRolesButton:', error);
+        try {
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+        } catch (followUpError) {
+            console.error('Error sending followUp:', followUpError);
+        }
     }
 }
 
@@ -560,25 +578,39 @@ async function handleSetupRolesButton(interaction: ButtonInteraction): Promise<v
  * Handle the setup test button
  */
 async function handleSetupTestButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
-    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
-    
-    if (!originalMessage) {
-        await interaction.followUp({
-            content: errorMessage || 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    await interaction.deferUpdate().catch(err => {
+        console.error('Error deferring update:', err);
+        // Continue execution even if deferUpdate fails
+    });
     
     try {
+        const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
+        
+        if (!originalMessage) {
+            try {
+                await interaction.followUp({
+                    content: errorMessage || 'An error occurred. Please try the setup command again.',
+                    ephemeral: true
+                });
+            } catch (followUpError) {
+                console.error('Error sending followUp:', followUpError);
+            }
+            return;
+        }
+        
+        // Import the testConfiguration function directly to avoid circular dependency issues
+        const { testConfiguration } = await import('./testConfiguration');
+        
         if (typeof testConfiguration !== 'function') {
             console.error('testConfiguration is not a function:', testConfiguration);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
-                ephemeral: true
-            });
+            try {
+                await interaction.followUp({
+                    content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                    ephemeral: true
+                });
+            } catch (followUpError) {
+                console.error('Error sending followUp:', followUpError);
+            }
             return;
         }
         
@@ -587,11 +619,15 @@ async function handleSetupTestButton(interaction: ButtonInteraction): Promise<vo
             setupMessage: interaction.message 
         });
     } catch (error) {
-        console.error('Error in testConfiguration:', error);
-        await interaction.followUp({
-            content: 'An error occurred with the setup wizard. Please try the setup command again.',
-            ephemeral: true
-        });
+        console.error('Error in handleSetupTestButton:', error);
+        try {
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+        } catch (followUpError) {
+            console.error('Error sending followUp:', followUpError);
+        }
     }
 }
 
@@ -827,25 +863,39 @@ async function handleSetupModRolesButton(interaction: ButtonInteraction): Promis
  * Handle the back button (from role setup)
  */
 async function handleSetupBackButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
-    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
-    
-    if (!originalMessage) {
-        await interaction.followUp({
-            content: errorMessage || 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    await interaction.deferUpdate().catch(err => {
+        console.error('Error deferring update:', err);
+        // Continue execution even if deferUpdate fails
+    });
     
     try {
+        const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
+        
+        if (!originalMessage) {
+            try {
+                await interaction.followUp({
+                    content: errorMessage || 'An error occurred. Please try the setup command again.',
+                    ephemeral: true
+                });
+            } catch (followUpError) {
+                console.error('Error sending followUp:', followUpError);
+            }
+            return;
+        }
+        
+        // Import the showSetupWelcome function directly to avoid circular dependency issues
+        const { showSetupWelcome } = await import('./setupWelcome');
+        
         if (typeof showSetupWelcome !== 'function') {
             console.error('showSetupWelcome is not a function:', showSetupWelcome);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
-                ephemeral: true
-            });
+            try {
+                await interaction.followUp({
+                    content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                    ephemeral: true
+                });
+            } catch (followUpError) {
+                console.error('Error sending followUp:', followUpError);
+            }
             return;
         }
         
@@ -854,11 +904,15 @@ async function handleSetupBackButton(interaction: ButtonInteraction): Promise<vo
             setupMessage: interaction.message 
         });
     } catch (error) {
-        console.error('Error in showSetupWelcome:', error);
-        await interaction.followUp({
-            content: 'An error occurred with the setup wizard. Please try the setup command again.',
-            ephemeral: true
-        });
+        console.error('Error in handleSetupBackButton:', error);
+        try {
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+        } catch (followUpError) {
+            console.error('Error sending followUp:', followUpError);
+        }
     }
 }
 
@@ -866,25 +920,39 @@ async function handleSetupBackButton(interaction: ButtonInteraction): Promise<vo
  * Handle the back to main menu button
  */
 async function handleSetupBackToMainButton(interaction: ButtonInteraction): Promise<void> {
-    await interaction.deferUpdate();
-    
-    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
-    
-    if (!originalMessage) {
-        await interaction.followUp({
-            content: errorMessage || 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    await interaction.deferUpdate().catch(err => {
+        console.error('Error deferring update:', err);
+        // Continue execution even if deferUpdate fails
+    });
     
     try {
+        const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
+        
+        if (!originalMessage) {
+            try {
+                await interaction.followUp({
+                    content: errorMessage || 'An error occurred. Please try the setup command again.',
+                    ephemeral: true
+                });
+            } catch (followUpError) {
+                console.error('Error sending followUp:', followUpError);
+            }
+            return;
+        }
+        
+        // Import the showSetupWelcome function directly to avoid circular dependency issues
+        const { showSetupWelcome } = await import('./setupWelcome');
+        
         if (typeof showSetupWelcome !== 'function') {
             console.error('showSetupWelcome is not a function:', showSetupWelcome);
-            await interaction.followUp({
-                content: 'An error occurred with the setup wizard. Please try the setup command again.',
-                ephemeral: true
-            });
+            try {
+                await interaction.followUp({
+                    content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                    ephemeral: true
+                });
+            } catch (followUpError) {
+                console.error('Error sending followUp:', followUpError);
+            }
             return;
         }
         
@@ -893,10 +961,14 @@ async function handleSetupBackToMainButton(interaction: ButtonInteraction): Prom
             setupMessage: interaction.message 
         });
     } catch (error) {
-        console.error('Error in showSetupWelcome:', error);
-        await interaction.followUp({
-            content: 'An error occurred with the setup wizard. Please try the setup command again.',
-            ephemeral: true
-        });
+        console.error('Error in handleSetupBackToMainButton:', error);
+        try {
+            await interaction.followUp({
+                content: 'An error occurred with the setup wizard. Please try the setup command again.',
+                ephemeral: true
+            });
+        } catch (followUpError) {
+            console.error('Error sending followUp:', followUpError);
+        }
     }
 }

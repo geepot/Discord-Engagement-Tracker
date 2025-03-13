@@ -82,7 +82,7 @@ export const testConfiguration: SetupHandler = async ({ message, setupMessage }:
             { name: 'Mod Roles', value: config.permissions.modRoleIds.length > 0 ? 
                 config.permissions.modRoleIds.map(id => `<@&${id}>`).join(', ') : 'None set', inline: true }
         )
-        .setFooter({ text: 'Discord Engagement Tracker • Configuration Test' });
+        .setFooter({ text: `Discord Engagement Tracker • Configuration Test • SetupID:${setupMessage.id}` });
     
     const row = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(

@@ -65,26 +65,24 @@ export const showSetupWelcome: SetupHandler = async ({ message, setupMessage }: 
         components: [row1, row2]
     });
     
-    // Store the original message ID as a custom property on the setup message
-    // We'll use this in the interaction handlers to find the original message
-    try {
-        // Store the original message ID as a property on the setup message
-        (setupMessage as any).originalMessageId = message.id;
-        
-        // Also store it in a custom field in the message content for persistence
-        // Add a hidden field to the embed to store the original message ID
-        embed.setFooter({ 
-            text: `Discord Engagement Tracker • Setup Wizard • OriginalID:${message.id}` 
-        });
-        
-        // Update the message with the modified embed
-        await setupMessage.edit({
-            embeds: [embed],
-            components: [row1, row2]
-        });
-    } catch (error) {
-        console.error('Error storing original message ID:', error);
-    }
+        // Store the setup message ID in the footer for persistence
+        // We'll use this in the interaction handlers to find the setup message
+        try {
+            // Add a hidden field to the embed to store the setup message ID
+            embed.setFooter({ 
+                text: `Discord Engagement Tracker • Setup Wizard • SetupID:${setupMessage.id}` 
+            });
+            
+            // Update the message with the modified embed
+            await setupMessage.edit({
+                embeds: [embed],
+                components: [row1, row2]
+            });
+            
+            console.log(`Stored setup message ID in footer: ${setupMessage.id}`);
+        } catch (error) {
+            console.error('Error storing setup message ID:', error);
+        }
 };
 
 // Register the setup welcome handler
