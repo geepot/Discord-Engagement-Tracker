@@ -16,7 +16,7 @@ import {
 /**
  * Shows the test configuration screen
  */
-export const testConfiguration: SetupHandler = async ({ message, setupMessage }: SetupContext): Promise<void> => {
+export const testConfiguration: SetupHandler = async ({ message, setupMessage, initiatorId }: SetupContext): Promise<void> => {
     const embed = new EmbedBuilder()
         .setTitle('✅ Configuration Test')
         .setDescription('Testing your current configuration...')
@@ -82,7 +82,7 @@ export const testConfiguration: SetupHandler = async ({ message, setupMessage }:
             { name: 'Mod Roles', value: config.permissions.modRoleIds.length > 0 ? 
                 config.permissions.modRoleIds.map(id => `<@&${id}>`).join(', ') : 'None set', inline: true }
         )
-        .setFooter({ text: `Discord Engagement Tracker • Configuration Test • SetupID:${setupMessage.id}` });
+        .setFooter({ text: `Discord Engagement Tracker • Configuration Test • SetupID:${setupMessage.id} • InitiatorID:${initiatorId}` });
     
     const row = new ActionRowBuilder<ButtonBuilder>()
         .addComponents(

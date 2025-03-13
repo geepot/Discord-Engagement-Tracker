@@ -615,6 +615,20 @@ async function handleSetupTestButton(interaction: ButtonInteraction): Promise<vo
     });
     
     try {
+        const message = interaction.message;
+        let initiatorId = null;
+        
+        // Extract initiator ID from the footer if available
+        if (message.embeds && message.embeds.length > 0) {
+            const footerText = message.embeds[0].footer?.text;
+            if (footerText) {
+                const initiatorIdMatch = footerText.match(/InitiatorID:(\d+)/);
+                if (initiatorIdMatch && initiatorIdMatch[1]) {
+                    initiatorId = initiatorIdMatch[1];
+                }
+            }
+        }
+        
         const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
         
         if (!originalMessage) {
@@ -647,7 +661,8 @@ async function handleSetupTestButton(interaction: ButtonInteraction): Promise<vo
         
         await testConfiguration({ 
             message: originalMessage, 
-            setupMessage: interaction.message 
+            setupMessage: interaction.message,
+            initiatorId: initiatorId || undefined
         });
     } catch (error) {
         console.error('Error in handleSetupTestButton:', error);
