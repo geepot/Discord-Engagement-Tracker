@@ -243,8 +243,11 @@ export class ActivityRankingCommand implements Command {
         return;
       }
 
-      // Format the ranking text
-      const formattedRanking = formatActivityRanking(
+      // Generate summary text
+      const summaryText = await this.generateSummaryText(stats, isActive);
+      
+      // Format the ranking text with summary included
+      const formattedRanking = summaryText + formatActivityRanking(
         rankedUsers, 
         count, 
         isActive, 
@@ -264,9 +267,9 @@ export class ActivityRankingCommand implements Command {
         const interaction = source as ChatInputCommandInteraction;
         await interaction.deferReply();
         
-        // Create pagination buttons (without summary message ID for now)
+        // Create pagination buttons
         const commandName = isActive ? 'most-active' : 'most-inactive';
-        const tempPaginationButtons = [
+        const paginationButtons = [
           new ButtonBuilder()
             .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
             .setLabel('Previous')
@@ -279,53 +282,17 @@ export class ActivityRankingCommand implements Command {
             .setDisabled(page >= totalPages)
         ];
         
-        // Create a temporary delete button
-        const tempDeleteButton = new ButtonBuilder()
+        // Create a delete button
+        const deleteButton = new ButtonBuilder()
           .setCustomId('delete_message')
           .setLabel('Delete')
           .setStyle(ButtonStyle.Danger);
         
-        // Create a temporary action row
-        const tempActionRow = new ActionRowBuilder<ButtonBuilder>()
-          .addComponents([...tempPaginationButtons, tempDeleteButton]);
-        
-        // Send the ranking message with pagination buttons first
-        await interaction.editReply({
-          content: formattedRanking,
-          components: [tempActionRow]
-        });
-        
-        // Generate summary text
-        const summaryText = await this.generateSummaryText(stats, isActive);
-        
-        // Send summary message after the ranking
-        const summaryMessage = await channel.send(summaryText);
-        
-        // Now update the buttons with the summary message ID
-        const updatedPaginationButtons = [
-          new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessage.id}`)
-            .setLabel('Previous')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page <= 1),
-          new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessage.id}`)
-            .setLabel('Next')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(page >= totalPages)
-        ];
-        
-        // Create a delete button that will delete both the current message and the summary message
-        const deleteButton = new ButtonBuilder()
-          .setCustomId(`delete_message:${summaryMessage.id}`)
-          .setLabel('Delete')
-          .setStyle(ButtonStyle.Danger);
-        
-        // Create an action row with the updated buttons
+        // Create an action row
         const actionRow = new ActionRowBuilder<ButtonBuilder>()
-          .addComponents([...updatedPaginationButtons, deleteButton]);
+          .addComponents([...paginationButtons, deleteButton]);
         
-        // Update the ranking message with the new buttons that include the summary message ID
+        // Send the combined message with pagination buttons
         await interaction.editReply({
           content: formattedRanking,
           components: [actionRow]
@@ -342,16 +309,9 @@ export class ActivityRankingCommand implements Command {
         // For button interactions, update the existing message
         const buttonInteraction = source as ButtonInteraction;
         
-        // Extract the summary message ID from the custom ID
-        const customIdParts = buttonInteraction.customId.split(':');
-        const summaryMessageId = customIdParts.length > 6 ? customIdParts[6] : null;
-        
-        // Create the components for the update
-        let actionRow;
-        
-        // First, update the ranking message with temporary buttons
+        // Create pagination buttons
         const commandName = isActive ? 'most-active' : 'most-inactive';
-        const tempPaginationButtons = [
+        const paginationButtons = [
           new ButtonBuilder()
             .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
             .setLabel('Previous')
@@ -364,151 +324,70 @@ export class ActivityRankingCommand implements Command {
             .setDisabled(page >= totalPages)
         ];
         
-        // Create a temporary delete button
-        const tempDeleteButton = new ButtonBuilder()
+        // Create a delete button
+        const deleteButton = new ButtonBuilder()
           .setCustomId('delete_message')
           .setLabel('Delete')
           .setStyle(ButtonStyle.Danger);
         
-        // Create a temporary action row
-        const tempActionRow = new ActionRowBuilder<ButtonBuilder>()
-          .addComponents([...tempPaginationButtons, tempDeleteButton]);
+        // Create an action row
+        const actionRow = new ActionRowBuilder<ButtonBuilder>()
+          .addComponents([...paginationButtons, deleteButton]);
         
-        // Update the ranking message first
+        // Update the message
         if (!isAlreadyDeferred) {
           await buttonInteraction.update({
             content: formattedRanking,
-            components: [tempActionRow]
+            components: [actionRow]
           });
         } else {
           await buttonInteraction.editReply({
             content: formattedRanking,
-            components: [tempActionRow]
+            components: [actionRow]
           });
         }
-        
-        // If we have a summary message ID, try to update it
-        // Otherwise, create a new summary message
-        let newSummaryMessageId = summaryMessageId;
-        
-        if (summaryMessageId) {
-          try {
-            // Try to fetch and update the existing summary message
-            const summaryMessage = await channel.messages.fetch(summaryMessageId);
-            if (summaryMessage) {
-              const summaryText = await this.generateSummaryText(stats, isActive);
-              await summaryMessage.edit(summaryText);
-            }
-          } catch (error) {
-            console.warn(`Could not update summary message: ${error}`);
-            // If we can't update the existing summary message, create a new one
-            const summaryText = await this.generateSummaryText(stats, isActive);
-            const newSummaryMessage = await channel.send(summaryText);
-            newSummaryMessageId = newSummaryMessage.id;
-          }
-        } else {
-          // Create a new summary message only if we don't have one
-          const summaryText = await this.generateSummaryText(stats, isActive);
-          const newSummaryMessage = await channel.send(summaryText);
-          newSummaryMessageId = newSummaryMessage.id;
-        }
-        
-        // Now update the buttons with the summary message ID
-        if (newSummaryMessageId) {
-          const updatedPaginationButtons = [
-            new ButtonBuilder()
-              .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${newSummaryMessageId}`)
-              .setLabel('Previous')
-              .setStyle(ButtonStyle.Primary)
-              .setDisabled(page <= 1),
-            new ButtonBuilder()
-              .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${newSummaryMessageId}`)
-              .setLabel('Next')
-              .setStyle(ButtonStyle.Primary)
-              .setDisabled(page >= totalPages)
-          ];
-          
-          // Create a delete button that will delete both the current message and the summary message
-          const deleteButton = new ButtonBuilder()
-            .setCustomId(`delete_message:${newSummaryMessageId}`)
-            .setLabel('Delete')
-            .setStyle(ButtonStyle.Danger);
-          
-          // Create an action row with the updated buttons
-          actionRow = new ActionRowBuilder<ButtonBuilder>()
-            .addComponents([...updatedPaginationButtons, deleteButton]);
-          
-          // Update the ranking message with the new buttons
-          if (isAlreadyDeferred) {
-            await buttonInteraction.editReply({
-              content: formattedRanking,
-              components: [actionRow]
-            });
-          } else {
-            // This shouldn't happen since we already updated above, but just in case
-            await buttonInteraction.editReply({
-              content: formattedRanking,
-              components: [actionRow]
-            });
-          }
-        }
       } else {
-        // For message commands, send new messages
+        // For message commands, send a single message
         // Create a message manager for this command
         const messageManager = new CommandMessageManager(channel);
         
-        // Send ranking message first
-        const rankingMessage = await messageManager.sendMessage(formattedRanking);
-        
-        // Generate summary text
-        const summaryText = await this.generateSummaryText(stats, isActive);
-        
-        // Send summary message after the ranking
-        const summaryMessage = await messageManager.sendMessage(summaryText);
-        
-        // Add warning if there's a big difference between active and total members
-        if (stats.activeMembers < stats.totalMembers * 0.5) {
-          await messageManager.sendMessage(
-            '⚠️ **Note:** Less than 50% of members have activity. ' +
-            'Rankings might not represent overall channel engagement.'
-          );
-        }
-        
-        // Create pagination buttons with the summary message ID included
+        // Create pagination buttons
         const commandName = isActive ? 'most-active' : 'most-inactive';
-        const updatedPaginationButtons = [
+        const paginationButtons = [
           new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}:${summaryMessage.id}`)
+            .setCustomId(`cmd_${commandName}:prev:${isActive}:${count}:${Math.max(1, page - 1)}`)
             .setLabel('Previous')
             .setStyle(ButtonStyle.Primary)
             .setDisabled(page <= 1),
           new ButtonBuilder()
-            .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}:${summaryMessage.id}`)
+            .setCustomId(`cmd_${commandName}:next:${isActive}:${count}:${Math.min(totalPages, page + 1)}`)
             .setLabel('Next')
             .setStyle(ButtonStyle.Primary)
             .setDisabled(page >= totalPages)
         ];
         
-        // Add delete button to the ranking message
+        // Send the combined message with pagination buttons
+        const message = await messageManager.sendMessage(formattedRanking);
+        
+        // Add buttons to the message
         try {
-          // Try to edit the ranking message to add buttons
-          await rankingMessage.edit({
+          await message.edit({
             content: formattedRanking,
             components: [
               new ActionRowBuilder<ButtonBuilder>()
                 .addComponents([
-                  ...updatedPaginationButtons,
+                  ...paginationButtons,
                   new ButtonBuilder()
-                    .setCustomId(`delete_message:${summaryMessage.id}`)
+                    .setCustomId('delete_message')
                     .setLabel('Delete')
                     .setStyle(ButtonStyle.Danger)
                 ])
             ]
           });
         } catch (error) {
-          console.warn('Could not update ranking message with buttons:', error);
+          console.warn('Could not update message with buttons:', error);
           // Fall back to adding buttons to the last message
-          await messageManager.addDeleteButtonToLastMessage(updatedPaginationButtons);
+          await messageManager.addDeleteButtonToLastMessage(paginationButtons);
         }
       }
     } catch (error) {
