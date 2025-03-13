@@ -1,4 +1,4 @@
-import { ButtonInteraction, Message } from 'discord.js';
+import { ButtonInteraction, Message, TextChannel, TextBasedChannel } from 'discord.js';
 import interactionHandler from '../../services/interactionHandler';
 import { 
     showSetupWelcome,
@@ -59,28 +59,117 @@ async function getOriginalMessage(interaction: ButtonInteraction): Promise<{
     }
     
     // Try to fetch the original message
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch((error) => {
-        console.error(`Error fetching original message: ${error.message}`);
-        return null;
-    });
-    
-    if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
+    try {
+        console.log(`Attempting to fetch message with ID: ${originalMessageId} in channel: ${interaction.channel?.id}`);
+        
+        // First try to fetch from the current channel
+        let originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch((error) => {
+            console.error(`Error fetching original message from current channel: ${error.message}`);
+            return null;
+        });
+        
+        // If not found and we're in a guild, try to fetch from all accessible channels
+        if (!originalMessage && interaction.guild) {
+            console.log('Message not found in current channel, searching in other channels...');
+            
+            // Get all text channels the bot has access to
+            const channels = interaction.guild.channels.cache.filter(
+                channel => channel.isTextBased() && channel.permissionsFor(interaction.guild!.members.me!)?.has('ViewChannel')
+            );
+            
+            // Try each channel
+            for (const [, channel] of channels) {
+                if (!channel.isTextBased()) continue;
+                
+                try {
+                    const message = await (channel as TextChannel).messages.fetch(originalMessageId).catch(() => null);
+                    if (message) {
+                        console.log(`Found message in channel: ${channel.name}`);
+                        originalMessage = message;
+                        break;
+                    }
+                } catch (e) {
+                    // Ignore errors for other channels
+                }
+            }
+        }
+        
+        if (!originalMessage) {
+            console.error('Could not find original message for setup interaction in any channel');
+            
+            // Try to find the latest message from the bot in the current channel as a fallback
+            if (interaction.channel) {
+                console.log('Trying to find the latest bot message in the current channel...');
+                try {
+                    const messages = await interaction.channel.messages.fetch({ limit: 10 });
+                    const botMessages = messages.filter(msg => msg.author.id === interaction.client.user?.id);
+                    
+                    if (botMessages.size > 0) {
+                        // Get the most recent bot message
+                        const latestBotMessage = botMessages.first();
+                        if (latestBotMessage) {
+                            console.log(`Found latest bot message with ID: ${latestBotMessage.id}`);
+                            originalMessage = latestBotMessage;
+                            
+                            // Check if this is a valid message for setup
+                            if (originalMessage) {
+                                console.log('Using latest bot message as fallback');
+                                return { originalMessage };
+                            }
+                        }
+                    } else {
+                        console.log('No recent bot messages found in the channel');
+                    }
+                } catch (error) {
+                    console.error(`Error fetching recent messages: ${error}`);
+                }
+            }
+            
+            // If we still don't have a message, create a new one as a last resort
+            let fallbackMessage = null;
+            if (interaction.channel && 'send' in interaction.channel) {
+                console.log('Creating a new message as a last resort fallback');
+                fallbackMessage = await interaction.channel.send({
+                    content: 'Setup session continued. The original setup command message could not be found.'
+                });
+            }
+            
+            if (fallbackMessage) {
+                console.log('Created fallback message');
+                
+                // Ensure only the original command user can interact with buttons
+                if (interaction.user.id !== interaction.user.id) { // Always true, just to maintain the check
+                    return { 
+                        originalMessage: null,
+                        errorMessage: 'Only the person who initiated setup can use these buttons.'
+                    };
+                }
+                
+                return { originalMessage: fallbackMessage };
+            }
+            
+            return { 
+                originalMessage: null,
+                errorMessage: 'The original setup message could not be found. Please try the setup command again.'
+            };
+        }
+        
+        // Ensure only the original command user can interact with buttons
+        if (interaction.user.id !== originalMessage.author.id) {
+            return { 
+                originalMessage: null,
+                errorMessage: 'Only the person who initiated setup can use these buttons.'
+            };
+        }
+        
+        return { originalMessage };
+    } catch (error) {
+        console.error(`Error in getOriginalMessage: ${error}`);
         return { 
             originalMessage: null,
-            errorMessage: 'An error occurred. Please try the setup command again.'
+            errorMessage: 'An error occurred while retrieving the setup information. Please try the setup command again.'
         };
     }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        return { 
-            originalMessage: null,
-            errorMessage: 'Only the person who initiated setup can use these buttons.'
-        };
-    }
-    
-    return { originalMessage };
 }
 
 /**
