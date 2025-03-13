@@ -105,11 +105,6 @@ export interface DbChannelMember {
     username: string;
 }
 
-export interface DbGuildPrefix {
-    guild_id: string;
-    prefix: string;
-}
-
 export interface DbScheduledReport {
     id: number;
     guild_id: string;

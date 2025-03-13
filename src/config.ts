@@ -9,32 +9,13 @@ if (!process.env.DISCORD_BOT_TOKEN) {
     process.exit(1);
 }
 
-// This will be populated after database initialization
-let databaseSettings: Map<string, string> = new Map();
-
-// Function to update settings from database after initialization
-export function updateSettingsFromDatabase(settings: Map<string, string>): void {
-    databaseSettings = settings;
-}
-
-// Helper function to get settings (will be used after database is initialized)
-function getSetting(key: string): string | undefined {
-    return databaseSettings.get(key);
-}
+// Configuration will be updated by the ConfigService
 
 interface BotConfig {
     token: string;
-    trackedChannelId?: string; // Now optional since it can be set via setup command
+    trackedChannelId?: string; // Optional since it can be set via setup command
     adminChannelId?: string; // Optional admin channel for error notifications
     intents: (keyof typeof GatewayIntentBits)[];
-    commandPrefix: string;
-    commands: {
-        checkEngagement: string;
-        mostActive: string;
-        mostInactive: string;
-        setPrefix: string; // New command for customizing prefix
-        report: string;    // New command for scheduled reports
-    };
     defaults: {
         activityRankingCount: number;
         messagesFetchLimit: number;
@@ -82,16 +63,6 @@ const config: BotConfig = {
         'MessageContent'
     ],
 
-    // Command configuration
-    commandPrefix: process.env.COMMAND_PREFIX || '!',
-    commands: {
-        checkEngagement: 'check-engagement',
-        mostActive: 'most-active',
-        mostInactive: 'most-inactive',
-        setPrefix: 'set-prefix',
-        report: 'schedule-report'
-    },
-
     // Default values
     defaults: {
         activityRankingCount: 10,
@@ -101,7 +72,7 @@ const config: BotConfig = {
 
     // Command permissions
     permissions: {
-        adminCommands: ['set-prefix', 'schedule-report'],
+        adminCommands: ['schedule-report'],
         modCommands: ['check-engagement', 'most-active', 'most-inactive'],
         adminRoleIds: [],  // Will be loaded from database after initialization
         modRoleIds: []     // Will be loaded from database after initialization

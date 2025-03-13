@@ -5,7 +5,6 @@ import {
     TextInputBuilder, 
     TextInputStyle, 
     ActionRowBuilder, 
-    ModalSubmitInteraction,
     Client,
     REST,
     Routes,
@@ -13,13 +12,12 @@ import {
     SlashCommandSubcommandsOnlyBuilder
 } from 'discord.js';
 import config from '../config';
+import CommandController from '../commands/controller/CommandController';
 
 // Type definitions for slash commands
-export type SlashCommandExecuteFunction = (interaction: ChatInputCommandInteraction) => Promise<void>;
-
 export interface SlashCommand {
     data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder;
-    execute: SlashCommandExecuteFunction;
+    execute?: (interaction: ChatInputCommandInteraction) => Promise<void>;
 }
 
 // Collection of registered slash commands
@@ -31,15 +29,6 @@ const commands = new Map<string, SlashCommand>();
  */
 export function registerCommand(command: SlashCommand): void {
     commands.set(command.data.name, command);
-}
-
-/**
- * Get a registered slash command
- * @param name The name of the command to get
- * @returns The slash command, or undefined if not found
- */
-export function getCommand(name: string): SlashCommand | undefined {
-    return commands.get(name);
 }
 
 /**
@@ -129,27 +118,6 @@ export function createModal(
  * @param interaction The slash command interaction
  */
 export async function handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    const command = getCommand(interaction.commandName);
-    
-    if (!command) {
-        await interaction.reply({
-            content: `No command matching ${interaction.commandName} was found.`,
-            ephemeral: true
-        });
-        return;
-    }
-    
-    try {
-        await command.execute(interaction);
-    } catch (error) {
-        console.error(`Error executing command ${interaction.commandName}:`, error);
-        
-        const errorMessage = 'There was an error while executing this command!';
-        
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: errorMessage, ephemeral: true });
-        } else {
-            await interaction.reply({ content: errorMessage, ephemeral: true });
-        }
-    }
+    // Use the CommandController to handle all commands
+    await CommandController.executeCommand(interaction);
 }

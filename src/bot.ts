@@ -1,17 +1,11 @@
 import { Client, Events, Message, GatewayIntentBits, TextChannel } from 'discord.js';
-import config, { updateSettingsFromDatabase } from './config';
-import messageTracker from './services/messageTracker';
-import database from './services/database';
-import reportScheduler from './services/reportScheduler';
-import interactionHandler from './services/interactionHandler';
+import config from './config';
 import { registerGeneralInteractionHandlers } from './utils/interactionHandlers';
 import { registerSlashCommands } from './utils/slashCommands';
-import { createDeleteButton } from './utils/messageButtons';
+import ServiceRegistry from './services/ServiceRegistry';
 
-// Import slash command modules
-import './commands/checkEngagement';
-import './commands/activityRanking';
-import './commands/scheduleReport';
+// Import command modules
+import registerCommands from './commands/index';
 import './commands/setup/index';
 
 class EngagementBot {
@@ -33,20 +27,23 @@ class EngagementBot {
         this.client.once(Events.ClientReady, async () => {
             console.log(`Logged in as ${this.client.user?.tag}`);
             
-            // Load settings from database
-            this.loadSettingsFromDatabase();
+            // Initialize services
+            await ServiceRegistry.initialize();
             
             // Process existing messages
             this.processExistingMessages();
             
             // Initialize report scheduler
-            reportScheduler.initialize(this.client);
+            ServiceRegistry.getReportSchedulerService().initializeClient(this.client);
             
             // Initialize the interaction handler
-            interactionHandler.initialize(this.client);
+            ServiceRegistry.getInteractionHandlerService().initializeClient(this.client);
             
             // Register general interaction handlers
             registerGeneralInteractionHandlers();
+            
+            // Register commands with the CommandController
+            registerCommands();
             
             // Register slash commands with Discord
             await registerSlashCommands(this.client);
@@ -61,20 +58,20 @@ class EngagementBot {
                     message.channel instanceof TextChannel && 
                     message.channel.permissionsFor(member)?.has('ViewChannel')
                 );
-                messageTracker.trackMessage(message, channelMembersList);
+                ServiceRegistry.getMessageTrackerService().trackMessage(message, channelMembersList);
             }
         });
 
         // Reaction events
         this.client.on(Events.MessageReactionAdd, async (reaction, user) => {
             if (config.trackedChannelId && reaction.message.channel.id === config.trackedChannelId) {
-                messageTracker.addReaction(reaction.message.id, reaction.emoji.name, user.id);
+                ServiceRegistry.getMessageTrackerService().addReaction(reaction.message.id, reaction.emoji.name, user.id);
             }
         });
 
         this.client.on(Events.MessageReactionRemove, async (reaction, user) => {
             if (config.trackedChannelId && reaction.message.channel.id === config.trackedChannelId) {
-                messageTracker.removeReaction(reaction.message.id, reaction.emoji.name, user.id);
+                ServiceRegistry.getMessageTrackerService().removeReaction(reaction.message.id, reaction.emoji.name, user.id);
             }
         });
     }
@@ -103,8 +100,8 @@ class EngagementBot {
             );
 
             for (const [_, message] of messages) {
-                messageTracker.trackMessage(message, channelMembersList);
-                await messageTracker.processExistingReactions(message);
+                ServiceRegistry.getMessageTrackerService().trackMessage(message, channelMembersList);
+                await ServiceRegistry.getMessageTrackerService().processExistingReactions(message);
             }
 
             console.log(`Processed ${messages.size} existing messages`);
@@ -113,66 +110,12 @@ class EngagementBot {
         }
     }
 
-
-    // Add a delete button to a message
-    private addDeleteButton(message: Message): void {
-        // Edit the message to add the button
-        message.edit({ 
-            components: [createDeleteButton()] 
-        }).catch(error => {
-            console.error('Error adding delete button:', error);
-        });
-    }
-
-    // Load settings from database
-    private loadSettingsFromDatabase(): void {
-        try {
-            const settings = database.getAllBotSettings();
-            
-            // Update config with database settings
-            updateSettingsFromDatabase(settings);
-            
-            // Update specific config properties if needed
-            if (settings.has('TRACKED_CHANNEL_ID')) {
-                config.trackedChannelId = settings.get('TRACKED_CHANNEL_ID');
-            }
-            
-            if (settings.has('ADMIN_CHANNEL_ID')) {
-                config.adminChannelId = settings.get('ADMIN_CHANNEL_ID');
-            }
-            
-            if (settings.has('ADMIN_ROLE_IDS')) {
-                const roleIds = settings.get('ADMIN_ROLE_IDS');
-                if (roleIds) {
-                    config.permissions.adminRoleIds = roleIds.split(',');
-                }
-            }
-            
-            if (settings.has('MOD_ROLE_IDS')) {
-                const roleIds = settings.get('MOD_ROLE_IDS');
-                if (roleIds) {
-                    config.permissions.modRoleIds = roleIds.split(',');
-                }
-            }
-            
-            console.log('Settings loaded from database');
-        } catch (error) {
-            console.error('Error loading settings from database:', error);
-        }
-    }
-
     // Handle graceful shutdown
     private async handleShutdown(): Promise<void> {
         console.log('Shutting down bot...');
         
-        // Sync data to database
-        messageTracker.forceSyncToDatabase();
-        
-        // Shutdown report scheduler
-        reportScheduler.shutdown();
-        
-        // Close database connection
-        database.close();
+        // Shutdown all services
+        await ServiceRegistry.shutdown();
         
         // Destroy client
         this.client.destroy();
