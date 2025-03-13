@@ -70,14 +70,26 @@ export const showSetupWelcome: SetupHandler = async ({ message, setupMessage }: 
         components: [row1, row2]
     });
     
-    // Store the original message ID in the setup message
+    // Store the original message ID as a custom property on the setup message
     // We'll use this in the interaction handlers to find the original message
-    setupMessage.reference = {
-        messageId: message.id,
-        channelId: message.channel.id,
-        guildId: message.guild?.id,
-        type: 0 // Required by TypeScript, but not used by Discord.js
-    };
+    try {
+        // Store the original message ID as a property on the setup message
+        (setupMessage as any).originalMessageId = message.id;
+        
+        // Also store it in a custom field in the message content for persistence
+        // Add a hidden field to the embed to store the original message ID
+        embed.setFooter({ 
+            text: `Discord Engagement Tracker • Setup Wizard • OriginalID:${message.id}` 
+        });
+        
+        // Update the message with the modified embed
+        await setupMessage.edit({
+            embeds: [embed],
+            components: [row1, row2]
+        });
+    } catch (error) {
+        console.error('Error storing original message ID:', error);
+    }
 };
 
 // Register the setup welcome handler

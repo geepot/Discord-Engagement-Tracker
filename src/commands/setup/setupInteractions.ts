@@ -1,4 +1,4 @@
-import { ButtonInteraction } from 'discord.js';
+import { ButtonInteraction, Message } from 'discord.js';
 import interactionHandler from '../../services/interactionHandler';
 import { 
     showSetupWelcome,
@@ -10,6 +10,78 @@ import {
     showModRoleSetup,
     testConfiguration
 } from './setupHandlers';
+
+/**
+ * Helper function to get the original message from a button interaction
+ * @param interaction The button interaction
+ * @returns The original message or null if not found
+ */
+async function getOriginalMessage(interaction: ButtonInteraction): Promise<{ 
+    originalMessage: Message | null; 
+    errorMessage?: string;
+}> {
+    const message = interaction.message;
+    
+    // Get the original message ID from the embed footer
+    let originalMessageId = null;
+    
+    // Check if we have embeds
+    if (message.embeds && message.embeds.length > 0) {
+        const footerText = message.embeds[0].footer?.text;
+        if (footerText) {
+            // Extract the original message ID from the footer text
+            const match = footerText.match(/OriginalID:(\d+)/);
+            if (match && match[1]) {
+                originalMessageId = match[1];
+                console.log(`Found original message ID in footer: ${originalMessageId}`);
+            }
+        }
+    }
+    
+    // Fallback to checking for originalMessageId property
+    if (!originalMessageId && (message as any).originalMessageId) {
+        originalMessageId = (message as any).originalMessageId;
+        console.log(`Found original message ID in property: ${originalMessageId}`);
+    }
+    
+    // Fallback to message reference (legacy method)
+    if (!originalMessageId && message.reference?.messageId) {
+        originalMessageId = message.reference.messageId;
+        console.log(`Found original message ID in reference: ${originalMessageId}`);
+    }
+    
+    if (!originalMessageId) {
+        console.error('No original message ID found for setup interaction');
+        return { 
+            originalMessage: null,
+            errorMessage: 'An error occurred. Please try the setup command again.'
+        };
+    }
+    
+    // Try to fetch the original message
+    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch((error) => {
+        console.error(`Error fetching original message: ${error.message}`);
+        return null;
+    });
+    
+    if (!originalMessage) {
+        console.error('Could not find original message for setup interaction');
+        return { 
+            originalMessage: null,
+            errorMessage: 'An error occurred. Please try the setup command again.'
+        };
+    }
+    
+    // Ensure only the original command user can interact with buttons
+    if (interaction.user.id !== originalMessage.author.id) {
+        return { 
+            originalMessage: null,
+            errorMessage: 'Only the person who initiated setup can use these buttons.'
+        };
+    }
+    
+    return { originalMessage };
+}
 
 /**
  * Register all setup-related interaction handlers
@@ -37,32 +109,11 @@ export function registerSetupInteractionHandlers(): void {
 async function handleSetupChannelButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -70,7 +121,7 @@ async function handleSetupChannelButton(interaction: ButtonInteraction): Promise
     
     await showChannelSetup({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
 
@@ -80,32 +131,11 @@ async function handleSetupChannelButton(interaction: ButtonInteraction): Promise
 async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -113,7 +143,7 @@ async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Pr
     
     await showAdminChannelSetup({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
 
@@ -123,32 +153,11 @@ async function handleSetupAdminChannelButton(interaction: ButtonInteraction): Pr
 async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -156,7 +165,7 @@ async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<
     
     await showPrefixSetup({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
 
@@ -166,32 +175,11 @@ async function handleSetupPrefixButton(interaction: ButtonInteraction): Promise<
 async function handleSetupRolesButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -199,7 +187,7 @@ async function handleSetupRolesButton(interaction: ButtonInteraction): Promise<v
     
     await showRoleSetup({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
 
@@ -209,32 +197,11 @@ async function handleSetupRolesButton(interaction: ButtonInteraction): Promise<v
 async function handleSetupTestButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -242,7 +209,7 @@ async function handleSetupTestButton(interaction: ButtonInteraction): Promise<vo
     
     await testConfiguration({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
 
@@ -252,32 +219,11 @@ async function handleSetupTestButton(interaction: ButtonInteraction): Promise<vo
 async function handleSetupAdminRolesButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -285,7 +231,7 @@ async function handleSetupAdminRolesButton(interaction: ButtonInteraction): Prom
     
     await showAdminRoleSetup({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
 
@@ -295,32 +241,11 @@ async function handleSetupAdminRolesButton(interaction: ButtonInteraction): Prom
 async function handleSetupModRolesButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -328,7 +253,7 @@ async function handleSetupModRolesButton(interaction: ButtonInteraction): Promis
     
     await showModRoleSetup({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
 
@@ -338,32 +263,11 @@ async function handleSetupModRolesButton(interaction: ButtonInteraction): Promis
 async function handleSetupBackButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -371,7 +275,7 @@ async function handleSetupBackButton(interaction: ButtonInteraction): Promise<vo
     
     await showSetupWelcome({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
 
@@ -381,32 +285,11 @@ async function handleSetupBackButton(interaction: ButtonInteraction): Promise<vo
 async function handleSetupBackToMainButton(interaction: ButtonInteraction): Promise<void> {
     await interaction.deferUpdate();
     
-    const message = interaction.message;
-    // Get the original message from the reference
-    const originalMessageId = interaction.message.reference?.messageId;
-    if (!originalMessageId) {
-        console.error('No message reference found for setup interaction');
-        await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
+    const { originalMessage, errorMessage } = await getOriginalMessage(interaction);
     
-    const originalMessage = await interaction.channel?.messages.fetch(originalMessageId).catch(() => null);
     if (!originalMessage) {
-        console.error('Could not find original message for setup interaction');
         await interaction.followUp({
-            content: 'An error occurred. Please try the setup command again.',
-            ephemeral: true
-        });
-        return;
-    }
-    
-    // Ensure only the original command user can interact with buttons
-    if (interaction.user.id !== originalMessage.author.id) {
-        await interaction.followUp({
-            content: 'Only the person who initiated setup can use these buttons.',
+            content: errorMessage || 'An error occurred. Please try the setup command again.',
             ephemeral: true
         });
         return;
@@ -414,6 +297,6 @@ async function handleSetupBackToMainButton(interaction: ButtonInteraction): Prom
     
     await showSetupWelcome({ 
         message: originalMessage, 
-        setupMessage: message 
+        setupMessage: interaction.message 
     });
 }
